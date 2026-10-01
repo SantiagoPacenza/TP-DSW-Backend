@@ -1,0 +1,43 @@
+{
+  "name": "tp-dsw-backend",
+  "version": "1.0.0",
+  "description": "Backend del sistema de gestión de gimnasio (TP DSW, UTN FRRo)",
+  "main": "dist/app.js",
+  "scripts": {
+    "build": "tsc -p ./tsconfig.json",
+    "start": "node dist/app.js",
+    "start:dev": "tsc-watch --noClear -p ./tsconfig.json --onSuccess \"node ./dist/app.js\"",
+    "test": "echo \"Tests not configured yet\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SantiagoPacenza/TP-DSW-Backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/SantiagoPacenza/TP-DSW-Backend/issues"
+  },
+  "homepage": "https://github.com/SantiagoPacenza/TP-DSW-Backend#readme",
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.25",
+    "@types/node": "^24.19.0",
+    "tsc-watch": "^7.2.1",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@mikro-orm/core": "6.6.16",
+    "@mikro-orm/mysql": "6.6.16",
+    "@mikro-orm/sql-highlighter": "1.0.1",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.5",
+    "express": "^4.22.3",
+    "reflect-metadata": "^0.2.2"
+  },
+  "overrides": {
+    "mysql2": "3.24.5"
+  }
+}

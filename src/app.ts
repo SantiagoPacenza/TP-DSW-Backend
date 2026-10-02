@@ -4,6 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import { RequestContext } from '@mikro-orm/core';
 import { orm, syncSchema } from './shared/db/orm.js';
+import { disciplinaRouter } from './disciplina/disciplina.routes.js';
 
 const app = express();
 
@@ -16,6 +17,8 @@ app.use((_req, _res, next) => {
 });
 // y antes de las rutas y middlewares de negocio
 
+app.use('/api/disciplinas', disciplinaRouter);
+
 app.get('/health', (_req, res) => {
   res.json({ ok: true });
 });
@@ -27,3 +30,4 @@ const port = Number(process.env.PORT) || 3000;
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
 });
+

@@ -1,0 +1,190 @@
+@url = http://localhost:3000/api/usuarios
+
+### 1. Listar (esperado: 200)
+GET {{url}}
+
+### 2. Crear un cliente (esperado: 201)
+# @name crear
+POST {{url}}
+Content-Type: application/json
+
+{ 
+  "rol": "cliente", 
+  "nombre": "Ana", 
+  "apellido": "Perez", 
+  "fechaNacimiento": "1995-04-12", 
+  "nombreUsuario": "anaperez", 
+  "email": "ana@mail.com", 
+  "contrasenia": "clave123", 
+  "telefono": "3415550000" 
+}
+
+### Guardar el id del usuario creado
+@id = {{crear.response.body.data.id}}
+
+### 3. Ver el creado (esperado: 200)
+# La respuesta NO tiene que incluir contrasenia
+# fechaNacimiento tiene que venir como "1995-04-12"
+GET {{url}}/{{id}}
+
+### 4. Crear repetido (esperado: 409)
+# "El nombre de usuario o el email ya está en uso"
+POST {{url}}
+Content-Type: application/json
+
+{
+  "rol": "cliente",
+  "nombre": "Ana",
+  "apellido": "Perez",
+  "fechaNacimiento": "1995-04-12",
+  "nombreUsuario": "anaperez",
+  "email": "ana@mail.com",
+  "contrasenia": "clave123"
+}
+
+### 5. Crear sin nombre (esperado: 400)
+# errores: ["El nombre es obligatorio"]
+POST {{url}}
+Content-Type: application/json
+
+{
+  "rol": "cliente",
+  "apellido": "Perez",
+  "fechaNacimiento": "1995-04-12",
+  "nombreUsuario": "sinnombre",
+  "email": "sinnombre@mail.com",
+  "contrasenia": "clave123"
+}
+
+### 6. Crear con varios datos invalidos juntos (esperado: 400)
+# errores (los cuatro en la misma respuesta):
+#  - "El email no tiene un formato válido"
+#  - "El rol debe ser uno de: admin, cliente, entrenador"
+#  - "La fechaNacimiento debe tener el formato AAAA-MM-DD"
+#  - "La contrasenia debe ser un texto de al menos 6 caracteres"
+POST {{url}}
+Content-Type: application/json
+
+{
+  "rol": "jefe",
+  "nombre": "Mal",
+  "apellido": "Datos",
+  "fechaNacimiento": "12/04/1995",
+  "nombreUsuario": "maldatos",
+  "email": "esto-no-es-un-mail",
+  "contrasenia": "123"
+}
+
+### 7. Crear con mismo email, otro nombreUsuario (esperado: 409)
+# "El nombre de usuario o el email ya está en uso"
+POST {{url}}
+Content-Type: application/json
+
+{
+  "rol": "cliente",
+  "nombre": "Otra",
+  "apellido": "Perez",
+  "fechaNacimiento": "1995-04-12",
+  "nombreUsuario": "otraperez",
+  "email": "ana@mail.com",
+  "contrasenia": "clave123"
+}
+
+### 8. Crear sin email (esperado: 400)
+# errores: ["El email es obligatorio"]
+POST {{url}}
+Content-Type: application/json
+
+{
+  "rol": "cliente",
+  "nombre": "Sin",
+  "apellido": "Email",
+  "fechaNacimiento": "1995-04-12",
+  "nombreUsuario": "sinemail",
+  "contrasenia": "clave123"
+}
+
+### 9. Campos de mas: se ignoran (esperado: 201, id distinto de 999 y createdAt de hoy)
+# @name crearExtra
+POST {{url}}
+Content-Type: application/json
+
+{
+  "id": 999,
+  "createdAt": "2000-01-01",
+  "rol": "entrenador",
+  "nombre": "Luis",
+  "apellido": "Gomez",
+  "fechaNacimiento": "1990-08-20",
+  "nombreUsuario": "luisgomez",
+  "email": "luis@mail.com",
+  "contrasenia": "clave123"
+}
+
+### Guardar el id del segundo usuario
+@idExtra = {{crearExtra.response.body.data.id}}
+
+### 10. Id que no es un numero (esperado: 400)
+# "El id debe ser un número entero"
+GET {{url}}/abc
+
+### 11. Id que no existe (esperado: 404)
+# "Usuario no encontrado"
+GET {{url}}/99999
+
+### 12. PUT completo, sin contrasenia: se conserva la actual (esperado: 200)
+PUT {{url}}/{{id}}
+Content-Type: application/json
+
+{
+  "rol": "cliente",
+  "nombre": "Ana Maria",
+  "apellido": "Perez",
+  "fechaNacimiento": "1995-04-12",
+  "nombreUsuario": "anaperez",
+  "email": "ana@mail.com",
+  "telefono": "3415551111"
+}
+
+### 13. PUT sin nombre (esperado: 400)
+# errores: ["El nombre es obligatorio"]
+PUT {{url}}/{{id}}
+Content-Type: application/json
+
+{
+  "rol": "cliente",
+  "apellido": "Perez",
+  "fechaNacimiento": "1995-04-12",
+  "nombreUsuario": "anaperez",
+  "email": "ana@mail.com"
+}
+
+### 14. PATCH de una sola parte (esperado: 200)
+PATCH {{url}}/{{id}}
+Content-Type: application/json
+
+{ "telefono": "3415552222" }
+
+### 15. PATCH con un email que ya existe (esperado: 409)
+PATCH {{url}}/{{id}}
+Content-Type: application/json
+
+{ "email": "luis@mail.com" }
+
+### 16. PATCH con contraseña nueva (esperado: 200; despues mirar el hash en la base)
+PATCH {{url}}/{{id}}
+Content-Type: application/json
+
+{ "contrasenia": "otraclave456" }
+
+### 17. Eliminar el primero (esperado: 200)
+DELETE {{url}}/{{id}}
+
+### 18. Ver el eliminado (esperado: 404)
+GET {{url}}/{{id}}
+
+### 19. Eliminar el segundo (esperado: 200)
+DELETE {{url}}/{{idExtra}}
+
+### 20. Listar para confirmar que quedo vacia (esperado: 200 y data vacio)
+GET {{url}}

@@ -29,6 +29,7 @@ GET {{url}}/{{id}}
 
 ### 4. Crear repetido (esperado: 409)
 # "El nombre de usuario o el email ya está en uso"
+# Va sin telefono a proposito: el telefono es opcional
 POST {{url}}
 Content-Type: application/json
 
@@ -60,8 +61,8 @@ Content-Type: application/json
 # errores (los cuatro en la misma respuesta):
 #  - "El email no tiene un formato válido"
 #  - "El rol debe ser uno de: admin, cliente, entrenador"
-#  - "La fechaNacimiento debe tener el formato AAAA-MM-DD"
-#  - "La contrasenia debe ser un texto de al menos 6 caracteres"
+#  - "La fechaNacimiento debe ser una fecha real (AAAA-MM-DD)"
+#  - "La contraseña debe ser un texto de al menos 6 caracteres"
 POST {{url}}
 Content-Type: application/json
 
@@ -104,7 +105,52 @@ Content-Type: application/json
   "contrasenia": "clave123"
 }
 
-### 9. Campos de mas: se ignoran (esperado: 201, id distinto de 999 y createdAt de hoy)
+### 9. Nombre demasiado largo (esperado: 400)
+# errores: ["El nombre no puede tener más de 30 caracteres"]
+POST {{url}}
+Content-Type: application/json
+
+{
+  "rol": "cliente",
+  "nombre": "Abcdefghijklmnopqrstuvwxyzabcde",
+  "apellido": "Perez",
+  "fechaNacimiento": "1995-04-12",
+  "nombreUsuario": "nombrelargo",
+  "email": "largo@mail.com",
+  "contrasenia": "clave123"
+}
+
+### 10. Fecha que no existe (esperado: 400)
+# errores: ["La fecha de nacimiento no es una fecha válida"]
+POST {{url}}
+Content-Type: application/json
+
+{
+  "rol": "cliente",
+  "nombre": "Fecha",
+  "apellido": "Falsa",
+  "fechaNacimiento": "1995-02-31",
+  "nombreUsuario": "fechafalsa",
+  "email": "falsa@mail.com",
+  "contrasenia": "clave123"
+}
+
+### 11. Fecha futura (esperado: 400)
+# errores: ["La fecha de nacimiento no puede ser en el futuro"]
+POST {{url}}
+Content-Type: application/json
+
+{
+  "rol": "cliente",
+  "nombre": "Fecha",
+  "apellido": "Futura",
+  "fechaNacimiento": "2999-01-01",
+  "nombreUsuario": "fechafutura",
+  "email": "futura@mail.com",
+  "contrasenia": "clave123"
+}
+
+### 12. Campos de mas: se ignoran (esperado: 201, id distinto de 999 y createdAt de hoy)
 # @name crearExtra
 POST {{url}}
 Content-Type: application/json
@@ -124,15 +170,15 @@ Content-Type: application/json
 ### Guardar el id del segundo usuario
 @idExtra = {{crearExtra.response.body.data.id}}
 
-### 10. Id que no es un numero (esperado: 400)
+### 13. Id que no es un numero (esperado: 400)
 # "El id debe ser un número entero"
 GET {{url}}/abc
 
-### 11. Id que no existe (esperado: 404)
+### 14. Id que no existe (esperado: 404)
 # "Usuario no encontrado"
 GET {{url}}/99999
 
-### 12. PUT completo, sin contrasenia: se conserva la actual (esperado: 200)
+### 15. PUT completo, sin contrasenia: se conserva la actual (esperado: 200)
 PUT {{url}}/{{id}}
 Content-Type: application/json
 
@@ -146,7 +192,7 @@ Content-Type: application/json
   "telefono": "3415551111"
 }
 
-### 13. PUT sin nombre (esperado: 400)
+### 16. PUT sin nombre (esperado: 400)
 # errores: ["El nombre es obligatorio"]
 PUT {{url}}/{{id}}
 Content-Type: application/json
@@ -159,32 +205,42 @@ Content-Type: application/json
   "email": "ana@mail.com"
 }
 
-### 14. PATCH de una sola parte (esperado: 200)
+### 17. PATCH de una sola parte (esperado: 200)
 PATCH {{url}}/{{id}}
 Content-Type: application/json
 
 { "telefono": "3415552222" }
 
-### 15. PATCH con un email que ya existe (esperado: 409)
+### 18. PATCH con un email que ya existe (esperado: 409)
+# "El nombre de usuario o el email ya está en uso"
 PATCH {{url}}/{{id}}
 Content-Type: application/json
 
 { "email": "luis@mail.com" }
 
-### 16. PATCH con contraseña nueva (esperado: 200; despues mirar el hash en la base)
+### 19. PATCH con contraseña nueva (esperado: 200; despues mirar el hash en la base)
 PATCH {{url}}/{{id}}
 Content-Type: application/json
 
 { "contrasenia": "otraclave456" }
 
-### 17. Eliminar el primero (esperado: 200)
+### 20. PATCH sin datos (esperado: 400)
+# "No hay datos para modificar"
+PATCH {{url}}/{{id}}
+Content-Type: application/json
+
+{}
+
+### 21. Eliminar el primero (esperado: 200)
+# "Usuario eliminado"
 DELETE {{url}}/{{id}}
 
-### 18. Ver el eliminado (esperado: 404)
+### 22. Ver el eliminado (esperado: 404)
+# "Usuario no encontrado"
 GET {{url}}/{{id}}
 
-### 19. Eliminar el segundo (esperado: 200)
+### 23. Eliminar el segundo (esperado: 200)
 DELETE {{url}}/{{idExtra}}
 
-### 20. Listar para confirmar que quedo vacia (esperado: 200 y data vacio)
+### 24. Listar para confirmar que quedo vacia (esperado: 200 y data vacio)
 GET {{url}}

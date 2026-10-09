@@ -11,25 +11,42 @@ const em = orm.em;
 // La contraseña solo es obligatoria en POST.
 function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
   const body = req.body;
-  const errores: string[] = []; // Se juntan todos los errores y se responden juntos
 
-  // Mismas reglas para los cuatro, por eso el for
-  const camposTexto = ['nombre', 'apellido', 'nombreUsuario', 'email'];
-  for (const campo of camposTexto) {
+  // Lista de textos vacia. errores.push guarda
+  // un mensaje de error y se responden todos juntos.
+  const errores: string[] = [];
+
+  // Cada campo de texto con su largo máximo
+  const maxCaracteres: Record<string, number> = {
+    nombre: 30,
+    apellido: 30,
+    nombreUsuario: 30,
+    email: 100,
+  };
+
+  // Mismas reglas para los cuatro, por eso el for.
+  // Si el campo no vino (undefined), solo es error cuando no es PATCH.
+  // trim() saca los espacios, así un nombre de solo espacio cuenta como vacío.
+  for (const campo of Object.keys(maxCaracteres)) {
     const valor = body[campo];
     if (valor === undefined) {
       if (req.method !== 'PATCH') errores.push(`El ${campo} es obligatorio`);
     } else if (typeof valor !== 'string' || valor.trim() === '') {
       errores.push(`El ${campo} debe ser un texto que no esté vacío`);
+    } else if (valor.trim().length > maxCaracteres[campo]) {
+      errores.push(
+        `El ${campo} no puede tener más de ${maxCaracteres[campo]} caracteres`,
+      );
     }
   }
 
-  // Validación mínima: no comprueba que el mail exista
-  if (typeof body.email === 'string' && !body.email.includes('@')) {
+  // Email: algo + @ + algo + . + algo, sin espacios
+  const formatoEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (typeof body.email === 'string' && !formatoEmail.test(body.email.trim())) {
     errores.push('El email no tiene un formato válido');
   }
 
-  // Por ahora el rol viene en el body (endpoint de admin). Con el login se protege
+  // Por ahora el rol viene en el body. Con el login se protege.
   if (body.rol === undefined) {
     if (req.method !== 'PATCH') errores.push('El rol es obligatorio');
   } else if (!Object.values(RolUsuario).includes(body.rol)) {
@@ -38,18 +55,30 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
     );
   }
 
-  // Solo formato: 1995-02-31 pasa y MySQL lo rechaza al guardar (500)
+  // fecha de nacimiento válida, no futura y formato AAAA-MM-DD.
   if (body.fechaNacimiento === undefined) {
-    if (req.method !== 'PATCH')
+    if (req.method !== 'PATCH') {
       errores.push('La fecha de nacimiento es obligatoria');
+    }
   } else if (
     typeof body.fechaNacimiento !== 'string' ||
     !/^\d{4}-\d{2}-\d{2}$/.test(body.fechaNacimiento)
   ) {
     errores.push('La fecha de nacimiento debe tener el formato AAAA-MM-DD');
+  } else {
+    const fecha = new Date(body.fechaNacimiento);
+
+    if (
+      isNaN(fecha.getTime()) ||
+      fecha.toISOString().slice(0, 10) !== body.fechaNacimiento
+    ) {
+      errores.push('La fecha de nacimiento no es una fecha válida');
+    } else if (fecha > new Date()) {
+      errores.push('La fecha de nacimiento no puede ser en el futuro');
+    }
   }
 
-  // Obligatoria solo en POST. En PUT y PATCH, si no viene, se conserva la actual
+  // Obligatoria solo en POST. En PUT y PATCH, si no viene, se conserva la actual.
   if (body.contrasenia === undefined) {
     if (req.method === 'POST') errores.push('La contraseña es obligatoria');
   } else if (
@@ -63,14 +92,17 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
   const tel = body.telefono;
   if (tel !== undefined && tel !== null && typeof tel !== 'string') {
     errores.push('El teléfono debe ser un texto');
+  } else if (typeof tel === 'string' && tel.trim().length > 25) {
+    errores.push('El teléfono no puede tener más de 25 caracteres');
   }
 
-  // El return evita que se llegue a next() con datos inválidos
+  // Si se anoto algun problema, se devuelve 400 con la lista de errores.
+  // El return evita que se llegue a next() con datos inválidos.
   if (errores.length > 0) {
     return res.status(400).json({ message: 'Datos inválidos', errores });
   }
 
-  // Solo pasan los campos de la entidad; lo demás que mande el cliente se ignora
+  // Solo pasan los campos de la entidad; lo demás que mande el cliente se ignora.
   const datosLimpios: Record<string, unknown> = {
     rol: body.rol,
     nombre: body.nombre?.trim(),
@@ -85,22 +117,29 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
     if (datosLimpios[campo] === undefined) delete datosLimpios[campo];
   });
 
+  if (Object.keys(datosLimpios).length === 0) {
+    return res.status(400).json({ message: 'No hay datos para modificar' });
+  }
+
   req.body.sanitizedInput = datosLimpios;
   next();
 }
 
 // Devuelve el id de la URL o responde 400 y devuelve null.
-// Se valida con regex porque parseInt("12abc") daría 12
+// Se valida con regex porque parseInt("12abc") daría 12 sin quejarse.
 function leerId(req: Request, res: Response): number | null {
-  if (!/^\d+$/.test(req.params.id)) {
+  const valor = req.params.id;
+
+  if (!/^\d+$/.test(valor)) {
     res.status(400).json({ message: 'El id debe ser un número entero' });
     return null;
   }
-  return Number(req.params.id);
+  return Number(valor);
 }
 
-// Duplicado (campo único) -> 409. Cualquier otro error -> 500 genérico,
-// el detalle va a la consola para no exponer datos internos
+// Duplicado (campo único) -> 409. Cualquier otro error -> 500 genérico.
+// El detalle va a la consola para no exponer datos internos (como nombres
+// de tablas, consultas SQL, etc.) al cliente.
 function manejarError(res: Response, error: unknown) {
   if (error instanceof UniqueConstraintViolationException) {
     return res
@@ -121,8 +160,8 @@ async function findAll(_req: Request, res: Response) {
   }
 }
 
-// findOne y no findOneOrFail: devuelve null si no existe y así el 404
-// no se mezcla con los errores reales del catch
+// findOne y no findOneOrFail: devuelve null si no existe
+// queremos distinguir "no existe" (404) de un fallo real.
 async function findOne(req: Request, res: Response) {
   try {
     const id = leerId(req, res);
@@ -169,14 +208,14 @@ async function update(req: Request, res: Response) {
       datos.contrasenia = await bcrypt.hash(datos.contrasenia, 10);
     }
     em.assign(usuario, datos);
-    await em.flush();
+    await em.flush(); // 409 si mismo nombreUsuario o email que otro usuario
     res.status(200).json({ message: 'Usuario actualizado', data: usuario });
   } catch (error) {
     manejarError(res, error);
   }
 }
 
-// Se busca antes de borrar para poder responder 404 (getReference no avisa)
+// Se busca antes de borrar para poder responder 404 si no existe (getReference no avisa)
 // TODO: con membresías asociadas va a fallar por clave foránea (hoy da 500)
 async function remove(req: Request, res: Response) {
   try {
@@ -188,7 +227,7 @@ async function remove(req: Request, res: Response) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    await em.removeAndFlush(usuario);
+    await em.remove(usuario).flush();
     res.status(200).json({ message: 'Usuario eliminado' });
   } catch (error) {
     manejarError(res, error);

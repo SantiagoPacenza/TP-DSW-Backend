@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { UniqueConstraintViolationException } from '@mikro-orm/core';
+import { leerId, manejarError } from '../shared/utils.js';
 import bcrypt from 'bcryptjs';
 import { orm } from '../shared/db/orm.js';
 import { Usuario, RolUsuario } from './usuario.entity.js';
@@ -125,31 +125,6 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-// Devuelve el id de la URL o responde 400 y devuelve null.
-// Se valida con regex porque parseInt("12abc") daría 12 sin quejarse.
-function leerId(req: Request, res: Response): number | null {
-  const valor = req.params.id;
-
-  if (!/^\d+$/.test(valor)) {
-    res.status(400).json({ message: 'El id debe ser un número entero' });
-    return null;
-  }
-  return Number(valor);
-}
-
-// Duplicado (campo único) -> 409. Cualquier otro error -> 500 genérico.
-// El detalle va a la consola para no exponer datos internos (como nombres
-// de tablas, consultas SQL, etc.) al cliente.
-function manejarError(res: Response, error: unknown) {
-  if (error instanceof UniqueConstraintViolationException) {
-    return res
-      .status(409)
-      .json({ message: 'El nombre de usuario o el email ya está en uso' });
-  }
-  console.error(error);
-  return res.status(500).json({ message: 'Error interno del servidor' });
-}
-
 // La contraseña no sale en la respuesta por el hidden: true de la entidad
 async function findAll(_req: Request, res: Response) {
   try {
@@ -187,7 +162,7 @@ async function add(req: Request, res: Response) {
     await em.flush(); // Acá MySQL rechaza los duplicados (-> 409)
     res.status(201).json({ message: 'Usuario creado', data: usuario });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, 'El nombre de usuario o el email ya está en uso');
   }
 }
 
@@ -211,7 +186,7 @@ async function update(req: Request, res: Response) {
     await em.flush(); // 409 si mismo nombreUsuario o email que otro usuario
     res.status(200).json({ message: 'Usuario actualizado', data: usuario });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, 'El nombre de usuario o el email ya está en uso');
   }
 }
 

@@ -66,11 +66,12 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
 
   if (body.contrasenia === undefined) {
     if (req.method === 'POST') errores.push('La contraseña es obligatoria');
-  } else if (
-    typeof body.contrasenia !== 'string' ||
-    body.contrasenia.trim().length < 6
-  ) {
-    errores.push('La contraseña debe ser un texto de al menos 6 caracteres');
+  } else if (typeof body.contrasenia !== 'string') {
+    errores.push('La contraseña debe ser un texto');
+  } else if (body.contrasenia.trim() === '') {
+    errores.push('La contraseña no puede estar vacía ni ser solo espacios');
+  } else if (body.contrasenia.length < 8) {
+    errores.push('La contraseña debe tener al menos 8 caracteres');
   }
 
   const tel = body.telefono;

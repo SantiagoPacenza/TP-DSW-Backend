@@ -1,83 +1,107 @@
 
-import type { Request, Response } from 'express';
-import { orm } from '../shared/db/orm.js';
+import type { Request, Response, NextFunction } from 'express';
 import { leerId, manejarError } from '../shared/utils.js';
+import { orm } from '../shared/db/orm.js';
 import { Disciplina } from './disciplina.entity.js';
 
 const em = orm.em;
 
-// Error propio para distinguir validaciones de errores internos.
-class ErrorValidacion extends Error {}
+// Valida y limpia los datos antes de llegar al controller.
+// POST y PUT exigen el nombre; PATCH permite modificar solo lo enviado.
+function sanitizeDisciplinaInput(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const body: unknown = req.body;
+  const errores: string[] = [];
 
-// Limpia y valida los datos recibidos.
-type DisciplinaInput = {
-  nombre: string;
-  descripcion?: string;
-};
-
-const sanitizeDisciplinaInput = (body: unknown): DisciplinaInput => {
-  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
-    throw new ErrorValidacion('El cuerpo debe ser un objeto');
+  // El cuerpo debe ser un objeto.
+  if (
+    typeof body !== 'object' ||
+    body === null ||
+    Array.isArray(body)
+  ) {
+    return res.status(400).json({
+      message: 'Datos inválidos',
+      errores: ['El cuerpo debe ser un objeto'],
+    });
   }
 
   const input = body as Record<string, unknown>;
 
-  if (typeof input.nombre !== 'string' || !input.nombre.trim()) {
-    throw new ErrorValidacion('El nombre es obligatorio');
+  // Nombre obligatorio en POST y PUT.
+  if (input.nombre === undefined) {
+    if (req.method !== 'PATCH') {
+      errores.push('El nombre es obligatorio');
+    }
+  } else if (
+    typeof input.nombre !== 'string' ||
+    input.nombre.trim() === ''
+  ) {
+    errores.push('El nombre debe ser un texto que no esté vacío');
   }
 
+  // Descripción opcional, pero debe ser texto si se envía.
   if (
     input.descripcion !== undefined &&
     typeof input.descripcion !== 'string'
   ) {
-    throw new ErrorValidacion('La descripción debe ser un texto');
+    errores.push('La descripción debe ser un texto');
   }
 
-  const nombre = input.nombre.trim();
-  const descripcion =
-    typeof input.descripcion === 'string'
-      ? input.descripcion.trim()
-      : undefined;
-
-  return {
-    nombre,
-    ...(descripcion !== undefined ? { descripcion } : {}),
-  };
-};
-
-// Responde 400 si los datos son inválidos.
-// Para otros errores, utiliza la función compartida.
-const manejarErrorDisciplina = (
-  res: Response,
-  error: unknown,
-  mensajeDuplicado: string,
-) => {
-  if (error instanceof ErrorValidacion) {
-    return res.status(400).json({ message: error.message });
+  // Devuelve todos los errores detectados.
+  if (errores.length > 0) {
+    return res.status(400).json({
+      message: 'Datos inválidos',
+      errores,
+    });
   }
 
-  return manejarError(res, error, mensajeDuplicado);
-};
+  // Construye el objeto con los campos permitidos.
+  const datosLimpios: Record<string, unknown> = {};
 
-// Obtener todas las disciplinas
-const findAll = async (_req: Request, res: Response) => {
+  if (input.nombre !== undefined) {
+    datosLimpios.nombre = (input.nombre as string).trim();
+  }
+
+  if (input.descripcion !== undefined) {
+    datosLimpios.descripcion =
+      (input.descripcion as string).trim();
+  }
+
+  // No permite una actualización sin datos.
+  if (Object.keys(datosLimpios).length === 0) {
+    return res.status(400).json({
+      message: 'No hay datos para modificar',
+    });
+  }
+
+  req.body.sanitizedInput = datosLimpios;
+
+  next();
+}
+
+// Obtener todas las disciplinas.
+async function findAll(_req: Request, res: Response) {
   try {
     const disciplinas = await em.find(Disciplina, {});
+
     return res.status(200).json({
-      message: 'Todas las disciplinas',
+      message: 'Disciplinas encontradas',
       data: disciplinas,
     });
-  } catch (error: unknown) {
+  } catch (error) {
     return manejarError(res, error);
   }
-};
+}
 
-// Obtener una disciplina por ID
-const findOne = async (req: Request, res: Response) => {
-  const id = leerId(req, res);
-  if (id === null) return;
-
+// Obtener una disciplina por ID.
+async function findOne(req: Request, res: Response) {
   try {
+    const id = leerId(req, res);
+    if (id === null) return;
+
     const disciplina = await em.findOne(Disciplina, { id });
 
     if (!disciplina) {
@@ -90,85 +114,106 @@ const findOne = async (req: Request, res: Response) => {
       message: 'Disciplina encontrada',
       data: disciplina,
     });
-  } catch (error: unknown) {
+  } catch (error) {
     return manejarError(res, error);
   }
-};
+}
 
-// Crear una disciplina
-const add = async (req: Request, res: Response) => {
+// Crear una disciplina.
+async function add(req: Request, res: Response) {
   try {
-    const input = sanitizeDisciplinaInput(req.body);
-    const disciplina = em.create(Disciplina, input);
+    const datos = req.body.sanitizedInput;
 
+    const disciplina = em.create(Disciplina, datos);
     await em.flush();
 
     return res.status(201).json({
       message: 'Disciplina creada',
       data: disciplina,
     });
-  } catch (error: unknown) {
-    return manejarErrorDisciplina(
+  } catch (error) {
+    return manejarError(
       res,
       error,
       'Ya existe una disciplina con ese nombre',
     );
   }
-};
+}
 
-// Actualizar una disciplina
-const update = async (req: Request, res: Response) => {
-  const id = leerId(req, res);
-  if (id === null) return;
-
+// Actualizar una disciplina.
+async function update(req: Request, res: Response) {
   try {
-    const input = sanitizeDisciplinaInput(req.body);
+    const id = leerId(req, res);
+    if (id === null) return;
+
     const disciplina = await em.findOne(Disciplina, { id });
 
     if (!disciplina) {
       return res.status(404).json({
-        message: 'Disciplina no encontrada para actualizar',
+        message: 'Disciplina no encontrada',
       });
     }
 
-    em.assign(disciplina, input);
+    const datos = req.body.sanitizedInput;
+
+    em.assign(disciplina, datos);
     await em.flush();
 
     return res.status(200).json({
       message: 'Disciplina actualizada',
       data: disciplina,
     });
-  } catch (error: unknown) {
-    return manejarErrorDisciplina(
+  } catch (error) {
+    return manejarError(
       res,
       error,
       'Ya existe una disciplina con ese nombre',
     );
   }
-};
+}
 
-// Eliminar una disciplina
-const remove = async (req: Request, res: Response) => {
-  const id = leerId(req, res);
-  if (id === null) return;
-
+// Eliminar una disciplina.
+async function remove(req: Request, res: Response) {
   try {
+    const id = leerId(req, res);
+    if (id === null) return;
+
     const disciplina = await em.findOne(Disciplina, { id });
 
     if (!disciplina) {
       return res.status(404).json({
-        message: 'Disciplina no encontrada para eliminar',
+        message: 'Disciplina no encontrada',
       });
     }
 
     await em.removeAndFlush(disciplina);
 
     return res.status(200).json({
-      message: 'Disciplina eliminada con éxito',
+      message: 'Disciplina eliminada',
     });
-  } catch (error: unknown) {
+  } catch (error) {
     return manejarError(res, error);
   }
+}
+
+export {
+  sanitizeDisciplinaInput,
+  findAll,
+  findOne,
+  add,
+  update,
+  remove,
 };
 
-export { findAll, findOne, add, update, remove };
+/* RECORDATORIO PROPIO PARA ENTENDER FUNCIONAMIENTOSSSSS
+  Controller de Disciplina:
+  - sanitizeDisciplinaInput: valida los datos recibidos, elimina espacios innecesarios y prepara los campos permitidos.
+  - findAll: obtiene todas las disciplinas.
+  - findOne: busca una disciplina por su ID.
+  - add: crea una disciplina con los datos validados.
+  - update: modifica una disciplina existente.
+  - remove: elimina una disciplina.
+ 
+  Las validaciones se realizan mediante el middleware sanitizeDisciplinaInput.
+  manejarError centraliza el tratamiento de errores.
+ */

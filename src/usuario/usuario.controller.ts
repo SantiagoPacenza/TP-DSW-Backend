@@ -6,17 +6,9 @@ import { Usuario, RolUsuario } from './usuario.entity.js';
 
 const em = orm.em;
 
-// Revisa y limpia el body antes del controller (POST, PUT y PATCH).
-// POST y PUT exigen todos los datos; PATCH solo valida lo que viene.
-// La contraseña solo es obligatoria en POST.
 function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
   const body = req.body;
-
-  // Lista de textos vacia. errores.push guarda
-  // un mensaje de error y se responden todos juntos.
   const errores: string[] = [];
-
-  // Cada campo de texto con su largo máximo
   const maxCaracteres: Record<string, number> = {
     nombre: 30,
     apellido: 30,
@@ -24,9 +16,6 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
     email: 100,
   };
 
-  // Mismas reglas para los cuatro, por eso el for.
-  // Si el campo no vino (undefined), solo es error cuando no es PATCH.
-  // trim() saca los espacios, así un nombre de solo espacio cuenta como vacío.
   for (const campo of Object.keys(maxCaracteres)) {
     const valor = body[campo];
     if (valor === undefined) {
@@ -40,13 +29,11 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
     }
   }
 
-  // Email: algo + @ + algo + . + algo, sin espacios
   const formatoEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (typeof body.email === 'string' && !formatoEmail.test(body.email.trim())) {
     errores.push('El email no tiene un formato válido');
   }
 
-  // Por ahora el rol viene en el body. Con el login se protege.
   if (body.rol === undefined) {
     if (req.method !== 'PATCH') errores.push('El rol es obligatorio');
   } else if (!Object.values(RolUsuario).includes(body.rol)) {
@@ -55,7 +42,6 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
     );
   }
 
-  // fecha de nacimiento válida, no futura y formato AAAA-MM-DD.
   if (body.fechaNacimiento === undefined) {
     if (req.method !== 'PATCH') {
       errores.push('La fecha de nacimiento es obligatoria');
@@ -78,17 +64,15 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
     }
   }
 
-  // Obligatoria solo en POST. En PUT y PATCH, si no viene, se conserva la actual.
   if (body.contrasenia === undefined) {
     if (req.method === 'POST') errores.push('La contraseña es obligatoria');
   } else if (
     typeof body.contrasenia !== 'string' ||
-    body.contrasenia.length < 6
+    body.contrasenia.trim().length < 6
   ) {
     errores.push('La contraseña debe ser un texto de al menos 6 caracteres');
   }
 
-  // Opcional; null permite borrarlo
   const tel = body.telefono;
   if (tel !== undefined && tel !== null && typeof tel !== 'string') {
     errores.push('El teléfono debe ser un texto');
@@ -96,13 +80,10 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
     errores.push('El teléfono no puede tener más de 25 caracteres');
   }
 
-  // Si se anoto algun problema, se devuelve 400 con la lista de errores.
-  // El return evita que se llegue a next() con datos inválidos.
   if (errores.length > 0) {
     return res.status(400).json({ message: 'Datos inválidos', errores });
   }
 
-  // Solo pasan los campos de la entidad; lo demás que mande el cliente se ignora.
   const datosLimpios: Record<string, unknown> = {
     rol: body.rol,
     nombre: body.nombre?.trim(),
@@ -125,7 +106,6 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-// La contraseña no sale en la respuesta por el hidden: true de la entidad
 async function findAll(_req: Request, res: Response) {
   try {
     const usuarios = await em.find(Usuario, {});
@@ -135,8 +115,6 @@ async function findAll(_req: Request, res: Response) {
   }
 }
 
-// findOne y no findOneOrFail: devuelve null si no existe
-// queremos distinguir "no existe" (404) de un fallo real.
 async function findOne(req: Request, res: Response) {
   try {
     const id = leerId(req, res);
@@ -152,10 +130,11 @@ async function findOne(req: Request, res: Response) {
   }
 }
 
-// Se guarda el hash de la contraseña, nunca el texto original
 async function add(req: Request, res: Response) {
   try {
     const datos = req.body.sanitizedInput;
+
+    // Se guarda el hash de la contraseña, nunca el texto original
     datos.contrasenia = await bcrypt.hash(datos.contrasenia, 10);
 
     const usuario = em.create(Usuario, datos);
@@ -166,7 +145,7 @@ async function add(req: Request, res: Response) {
   }
 }
 
-// Sirve para PUT y PATCH: la diferencia ya se resolvió en el sanitize
+// Sirve para PUT y PATCH
 async function update(req: Request, res: Response) {
   try {
     const id = leerId(req, res);
@@ -183,7 +162,7 @@ async function update(req: Request, res: Response) {
       datos.contrasenia = await bcrypt.hash(datos.contrasenia, 10);
     }
     em.assign(usuario, datos);
-    await em.flush(); // 409 si mismo nombreUsuario o email que otro usuario
+    await em.flush(); // 409 si nombreUsuario o email es el mismo que el de otro usuario
     res.status(200).json({ message: 'Usuario actualizado', data: usuario });
   } catch (error) {
     manejarError(res, error, 'El nombre de usuario o el email ya está en uso');
@@ -191,7 +170,6 @@ async function update(req: Request, res: Response) {
 }
 
 // Se busca antes de borrar para poder responder 404 si no existe (getReference no avisa)
-// TODO: con membresías asociadas va a fallar por clave foránea (hoy da 500)
 async function remove(req: Request, res: Response) {
   try {
     const id = leerId(req, res);

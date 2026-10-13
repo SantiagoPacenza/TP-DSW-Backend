@@ -1,0 +1,127 @@
+@url = http://localhost:3000/api/disciplinas
+
+### 1. Listar (esperado: 200)
+GET {{url}}
+
+### 2. Crear una disciplina (esperado: 201)
+# @name crear
+POST {{url}}
+Content-Type: application/json
+
+{
+  "nombre": "Functional Training",
+  "descripcion": "Entrenamiento funcional de alta intensidad enfocado en la fuerza y resistencia."
+}
+
+### Guardar el id de la disciplina creada
+@id = {{crear.response.body.data.id}}
+
+### 3. Ver la creada (esperado: 200)
+GET {{url}}/{{id}}
+
+### 4. Crear repetida (esperado: 500 o conflicto manejado)
+# "Ya existe una disciplina con ese nombre"
+POST {{url}}
+Content-Type: application/json
+
+{
+  "nombre": "Functional Training",
+  "descripcion": "Intentando duplicar nombre único."
+}
+
+### 5. Crear sin nombre (esperado: 400)
+# errores: ["El nombre es obligatorio"]
+POST {{url}}
+Content-Type: application/json
+
+{
+  "descripcion": "Disciplina creada sin nombre para probar validación."
+}
+
+### 6. Crear con nombre vacío (esperado: 400)
+# errores: ["El nombre debe ser un texto que no esté vacío"]
+POST {{url}}
+Content-Type: application/json
+
+{
+  "nombre": "   ",
+  "descripcion": "Nombre con espacios en blanco."
+}
+
+### 7. Crear con descripción inválida que no es texto (esperado: 400)
+# errores: ["La descripción debe ser un texto"]
+POST {{url}}
+Content-Type: application/json
+
+{
+  "nombre": "Spinning",
+  "descripcion": 12345
+}
+
+### 8. Crear segunda disciplina para pruebas adicionales (esperado: 201)
+# @name crearExtra
+POST {{url}}
+Content-Type: application/json
+
+{
+  "nombre": "Yoga",
+  "descripcion": "Clases de relajación, flexibilidad y control mental."
+}
+
+### Guardar el id de la segunda disciplina
+@idExtra = {{crearExtra.response.body.data.id}}
+
+### 9. Id que no es un número (esperado: 400)
+# "El id debe ser un número entero"
+GET {{url}}/abc
+
+### 10. Id que no existe (esperado: 404)
+# "Disciplina no encontrada"
+GET {{url}}/99999
+
+### 11. PUT completo (esperado: 200)
+PUT {{url}}/{{id}}
+Content-Type: application/json
+
+{
+  "nombre": "Functional Training Avanzado",
+  "descripcion": "Versión avanzada y pesada del entrenamiento funcional."
+}
+
+### 12. PUT sin nombre (esperado: 400)
+# errores: ["El nombre es obligatorio"]
+PUT {{url}}/{{id}}
+Content-Type: application/json
+
+{
+  "descripcion": "Falta el nombre obligatorio."
+}
+
+### 13. PATCH de una sola parte - cambiar solo la descripción (esperado: 200)
+PATCH {{url}}/{{id}}
+Content-Type: application/json
+
+{
+  "descripcion": "Descripción actualizada mediante PATCH."
+}
+
+### 14. PATCH sin datos (esperado: 400)
+# "No hay datos para modificar"
+PATCH {{url}}/{{id}}
+Content-Type: application/json
+
+{}
+
+### 15. Eliminar la primera disciplina (esperado: 200)
+# "Disciplina eliminada"
+DELETE {{url}}/{{id}}
+
+### 16. Ver la eliminada (esperado: 404)
+# "Disciplina no encontrada"
+GET {{url}}/{{id}}
+
+### 17. Eliminar la segunda disciplina (esperado: 200)
+DELETE {{url}}/{{idExtra}}
+
+### 18. Listar para confirmar que quedó vacía (esperado: 200 y data vacío)
+GET {{url}}

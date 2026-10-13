@@ -9,7 +9,7 @@ POST {{url}}
 Content-Type: application/json
 
 {
-  "nombre": "Plan Medio",
+  "nombre": "Plan Total",
   "precio": 15000.50,
   "incluyeClasesGrupales": false,
   "duracionEnMeses": 3,
@@ -152,3 +152,4 @@ DELETE {{url}}/{{idExtra}}
 
 ### 18. Listar para confirmar que quedó vacío (esperado: 200 y data vacío)
 GET {{url}}
+

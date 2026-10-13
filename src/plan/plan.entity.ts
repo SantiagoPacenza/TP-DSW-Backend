@@ -1,6 +1,6 @@
 import { Entity, Property, OneToMany, Collection } from '@mikro-orm/core';
 import { BaseEntity } from '../shared/db/baseEntity.entity.js';
-import { Membresia } from '../membresia/membresia.entity.js';
+import type { Membresia } from '../membresia/membresia.entity.js';
 
 @Entity()
 export class Plan extends BaseEntity {
@@ -20,8 +20,8 @@ export class Plan extends BaseEntity {
   @Property({ type: 'string', length: 255 })
   descripcion!: string;
 
-  // Relación: 1 Plan puede tener N Membresías
-  @OneToMany(() => Membresia, (membresia) => membresia.plan)
+  // Relación: 1 Plan puede tener N Membresías (tipamos explícitamente el parámetro)
+  @OneToMany(() => 'Membresia', (membresia: Membresia) => membresia.plan)
   membresias = new Collection<Membresia>(this);
 
 }

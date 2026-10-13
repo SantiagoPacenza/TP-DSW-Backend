@@ -1,7 +1,7 @@
 import { Entity, Enum, Property, ManyToOne } from '@mikro-orm/core';
 import { BaseEntity } from '../shared/db/baseEntity.entity.js';
-import { Usuario } from '../usuario/usuario.entity.js';
-import { Plan } from '../plan/plan.entity.js';
+import type { Usuario } from '../usuario/usuario.entity.js';
+import type { Plan } from '../plan/plan.entity.js';
 
 export enum EstadoMembresia {
   ACTIVA = 'activa',
@@ -24,11 +24,11 @@ export class Membresia extends BaseEntity {
   estadoMembresia!: EstadoMembresia;
 
   // Relación: Muchas membresías pertenecen a 1 solo Usuario (obligatorio)
-  @ManyToOne(() => Usuario, { nullable: false })
+  @ManyToOne(() => 'Usuario', { nullable: false })
   usuario!: Usuario;
 
   // Relación: Muchas membresías pertenecen a 1 solo Plan (obligatorio)
-  @ManyToOne(() => Plan, { nullable: false })
+  @ManyToOne(() => 'Plan', { nullable: false })
   plan!: Plan;
 
 }

@@ -196,11 +196,12 @@ function sanitizeInscripcionInput(req: Request, res: Response, next: NextFunctio
     );
   }
 
-  // Validar o asignar 'fechaInscripcion' de forma segura
+  // Validar o asignar 'fechaInscripcion' de forma segura (fecha actual)
   let fechaInscripcionFinal: string | undefined = undefined;
 
   if (req.method === 'POST') {
     fechaInscripcionFinal = new Date().toISOString().slice(0, 10);
+
   } else if (body.fechaInscripcion !== undefined) {
     if (typeof body.fechaInscripcion !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.fechaInscripcion)) {
       errores.push('La fecha de inscripción debe tener el formato YYYY-MM-DD');

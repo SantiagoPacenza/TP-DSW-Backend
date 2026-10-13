@@ -25,6 +25,7 @@ export class Clase extends BaseEntity {
   // Relación: Muchas Clases pertenecen a 1 sola Disciplina (obligatorio)
   @ManyToOne(() => 'Disciplina', { nullable: false })
   disciplina!: Disciplina;
+  
 }
 
 export enum DiaSemana {

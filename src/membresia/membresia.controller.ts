@@ -157,6 +157,7 @@ function sanitizeMembresiaInput(req: Request, res: Response, next: NextFunction)
   // 1. Validar 'usuarioId'
   if (body.usuarioId === undefined) {
     if (req.method !== 'PATCH') errores.push('El ID de usuario es obligatorio');
+
   } else if (typeof body.usuarioId !== 'number' || !Number.isInteger(body.usuarioId) || body.usuarioId <= 0) {
     errores.push('El ID de usuario debe ser un número entero válido');
   }
@@ -164,6 +165,7 @@ function sanitizeMembresiaInput(req: Request, res: Response, next: NextFunction)
   // 2. Validar 'planId'
   if (body.planId === undefined) {
     if (req.method !== 'PATCH') errores.push('El ID de plan es obligatorio');
+
   } else if (typeof body.planId !== 'number' || !Number.isInteger(body.planId) || body.planId <= 0) {
     errores.push('El ID de plan debe ser un número entero válido');
   }
@@ -189,6 +191,7 @@ function sanitizeMembresiaInput(req: Request, res: Response, next: NextFunction)
       fecha.toISOString().slice(0, 10) !== body.fechaInicio
     ) {
       errores.push('La fecha de inicio no es una fecha válida');
+
     } else if (fecha < hoy) {
       errores.push('La fecha de inicio de una membresia no puede ser en el pasado');
     }

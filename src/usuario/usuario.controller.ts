@@ -16,6 +16,13 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
     email: 100,
   };
 
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return res.status(400).json({
+      message: 'Datos inválidos',
+      errores: ['El cuerpo debe ser un objeto'],
+    });
+  }
+
   for (const campo of Object.keys(maxCaracteres)) {
     const valor = body[campo];
     if (valor === undefined) {

@@ -8,18 +8,14 @@ import {
   remove,
 } from './disciplina.controller.js';
 
-const router = Router();
+export const disciplinaRouter = Router();
 
-router.get('/', findAll);
-router.get('/:id', findOne);
-
-router.post('/', sanitizeDisciplinaInput, add);
-router.put('/:id', sanitizeDisciplinaInput, update);
-router.patch('/:id', sanitizeDisciplinaInput, update);
-
-router.delete('/:id', remove);
-
-export default router;
+disciplinaRouter.get('/', findAll);
+disciplinaRouter.get('/:id', findOne);
+disciplinaRouter.post('/', sanitizeDisciplinaInput, add);
+disciplinaRouter.put('/:id', sanitizeDisciplinaInput, update);
+disciplinaRouter.patch('/:id', sanitizeDisciplinaInput, update);
+disciplinaRouter.delete('/:id', remove);
 
 //Si alguien toca esta puerta (get, post...) con esta direccion
 //mandalo a ejecutar tal funcion (findAll, findOne, ...) al controlador

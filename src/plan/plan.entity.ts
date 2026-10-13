@@ -1,6 +1,8 @@
 import { Entity, Property } from '@mikro-orm/core';
 import { BaseEntity } from '../shared/db/baseEntity.entity.js';
 
+// Entidad Plan
+
 @Entity()
 export class Plan extends BaseEntity {
   

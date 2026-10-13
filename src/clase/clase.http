@@ -1,0 +1,163 @@
+@url = http://localhost:3000/api/clases
+
+### 1. Listar (esperado: 200)
+GET {{url}}
+
+### 2. Crear una clase (esperado: 201)
+# @name crear
+POST {{url}}
+Content-Type: application/json
+
+{
+  "cupos": 20,
+  "diaSemana": "lunes",
+  "horaInicio": "08:00",
+  "horaFin": "09:00",
+  "disciplinaId": 1
+}
+
+### Guardar el id de la clase creada
+@id = {{crear.response.body.data.id}}
+
+### 3. Ver la creada (esperado: 200)
+GET {{url}}/{{id}}
+
+### 4. Crear sin cupos (esperado: 400)
+# errores: ["El número de cupos es obligatorio"]
+POST {{url}}
+Content-Type: application/json
+
+{
+  "diaSemana": "martes",
+  "horaInicio": "10:00",
+  "horaFin": "11:00",
+  "disciplinaId": 1
+}
+
+### 5. Crear con cupos inválidos - negativo o no entero (esperado: 400)
+# errores: ["El número de cupos debe ser un número entero válido"]
+POST {{url}}
+Content-Type: application/json
+
+{
+  "cupos": -5,
+  "diaSemana": "martes",
+  "horaInicio": "10:00",
+  "horaFin": "11:00",
+  "disciplinaId": 1
+}
+
+### 6. Crear con día de la semana inválido (esperado: 400)
+# errores: ["El día de la semana debe ser uno de: lunes, martes, miercoles, jueves, viernes, sabado, domingo"]
+POST {{url}}
+Content-Type: application/json
+
+{
+  "cupos": 15,
+  "diaSemana": "feriado",
+  "horaInicio": "10:00",
+  "horaFin": "11:00",
+  "disciplinaId": 1
+}
+
+### 7. Crear con formato de hora inválido (esperado: 400)
+# errores: ["La hora de inicio debe tener el formato HH:mm"]
+POST {{url}}
+Content-Type: application/json
+
+{
+  "cupos": 15,
+  "diaSemana": "miercoles",
+  "horaInicio": "8 y media",
+  "horaFin": "09:30",
+  "disciplinaId": 1
+}
+
+### 8. Crear sin disciplinaId (esperado: 400)
+# errores: ["La disciplina es obligatoria"]
+POST {{url}}
+Content-Type: application/json
+
+{
+  "cupos": 15,
+  "diaSemana": "jueves",
+  "horaInicio": "10:00",
+  "horaFin": "11:00"
+}
+
+### 9. Crear segunda clase para pruebas adicionales (esperado: 201)
+# @name crearExtra
+POST {{url}}
+Content-Type: application/json
+
+{
+  "cupos": 10,
+  "diaSemana": "viernes",
+  "horaInicio": "18:00",
+  "horaFin": "19:00",
+  "disciplinaId": 1
+}
+
+### Guardar el id de la segunda clase
+@idExtra = {{crearExtra.response.body.data.id}}
+
+### 10. Id que no es un número (esperado: 400)
+# "El id debe ser un número entero"
+GET {{url}}/abc
+
+### 11. Id que no existe (esperado: 404)
+# "Clase no encontrada"
+GET {{url}}/99999
+
+### 12. PUT completo (esperado: 200)
+PUT {{url}}/{{id}}
+Content-Type: application/json
+
+{
+  "cupos": 25,
+  "diaSemana": "lunes",
+  "horaInicio": "08:30",
+  "horaFin": "09:30",
+  "disciplinaId": 1
+}
+
+### 13. PUT sin número de cupos (esperado: 400)
+# errores: ["El número de cupos es obligatorio"]
+PUT {{url}}/{{id}}
+Content-Type: application/json
+
+{
+  "diaSemana": "lunes",
+  "horaInicio": "08:30",
+  "horaFin": "09:30",
+  "disciplinaId": 1
+}
+
+### 14. PATCH de una sola propiedad - cambiar cupos (esperado: 200)
+PATCH {{url}}/{{id}}
+Content-Type: application/json
+
+{
+  "cupos": 30
+}
+
+### 15. PATCH sin datos (esperado: 400)
+# "No hay datos para modificar"
+PATCH {{url}}/{{id}}
+Content-Type: application/json
+
+{}
+
+### 16. Eliminar la primera clase (esperado: 200)
+# "Clase eliminada"
+DELETE {{url}}/{{id}}
+
+### 17. Ver la eliminada (esperado: 404)
+# "Clase no encontrada"
+GET {{url}}/{{id}}
+
+### 18. Eliminar la segunda clase (esperado: 200)
+DELETE {{url}}/{{idExtra}}
+
+### 19. Listar para confirmar que quedó vacía (esperado: 200 y data vacío)
+GET {{url}}

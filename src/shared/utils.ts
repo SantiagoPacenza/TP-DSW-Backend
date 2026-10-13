@@ -6,7 +6,7 @@ import { UniqueConstraintViolationException } from '@mikro-orm/core';
 export function leerId(req: Request, res: Response): number | null {
   const valor = req.params.id;
 
-  if (!/^\d+$/.test(valor)) {
+  if (!/^\d+$/.test(valor)) { // Expresión regular valida que sea entero
     res.status(400).json({ message: 'El id debe ser un número entero' });
     return null;
   }

@@ -6,6 +6,7 @@ import { RequestContext } from '@mikro-orm/core';
 import { orm, syncSchema } from './shared/db/orm.js';
 import { disciplinaRouter } from './disciplina/disciplina.routes.js';
 import { usuarioRouter } from './usuario/usuario.routes.js';
+import { planRouter } from './plan/plan.routes.js';
 
 const app = express();
 
@@ -18,8 +19,9 @@ app.use((_req, _res, next) => {
 });
 // y antes de las rutas y middlewares de negocio
 
-app.use('/api/disciplinas', disciplinaRouter);
 app.use('/api/usuarios', usuarioRouter);
+app.use('/api/disciplinas', disciplinaRouter);
+app.use('/api/planes', planRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });

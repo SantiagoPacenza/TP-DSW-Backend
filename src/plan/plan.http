@@ -1,0 +1,154 @@
+@url = http://localhost:3000/api/planes
+
+### 1. Listar (esperado: 200)
+GET {{url}}
+
+### 2. Crear un plan (esperado: 201)
+# @name crear
+POST {{url}}
+Content-Type: application/json
+
+{
+  "nombre": "Plan Medio",
+  "precio": 15000.50,
+  "incluyeClasesGrupales": false,
+  "duracionEnMeses": 3,
+  "descripcion": "Acceso total a sala de musculación y todas las clases grupales."
+}
+
+### Guardar el id del plan creado
+@id = {{crear.response.body.data.id}}
+
+### 3. Ver el creado (esperado: 200)
+GET {{url}}/{{id}}
+
+### 4. Crear sin nombre (esperado: 400)
+# errores: ["El nombre es obligatorio"]
+POST {{url}}
+Content-Type: application/json
+
+{
+  "precio": 10000,
+  "incluyeClasesGrupales": false,
+  "duracionEnMeses": 1,
+  "descripcion": "Plan sin nombre para probar validación."
+}
+
+### 5. Crear con precio inválido (esperado: 400)
+# errores: ["El precio debe ser un número válido"]
+POST {{url}}
+Content-Type: application/json
+
+{
+  "nombre": "Plan Promo",
+  "precio": "gratis",
+  "incluyeClasesGrupales": true,
+  "duracionEnMeses": 1,
+  "descripcion": "Precio como texto no permitido."
+}
+
+### 6. Crear con duración inválida que no es entera (esperado: 400)
+# errores: ["La duración en meses debe ser un número entero válido"]
+POST {{url}}
+Content-Type: application/json
+
+{
+  "nombre": "Plan Medio",
+  "precio": 8000,
+  "incluyeClasesGrupales": false,
+  "duracionEnMeses": 2.5,
+  "descripcion": "Duración con decimales no permitida."
+}
+
+### 7. Crear con varios datos inválidos juntos (esperado: 400)
+# errores (varios en la misma respuesta):
+#   - "El nombre debe ser un texto que no esté vacío"
+#   - "El precio es obligatorio"
+#   - "El campo 'Incluye clases grupales' debe ser un booleano (true o false)"
+POST {{url}}
+Content-Type: application/json
+
+{
+  "nombre": "",
+  "incluyeClasesGrupales": "si",
+  "duracionEnMeses": 6,
+  "descripcion": "Varios errores de prueba."
+}
+
+### 8. Nombre demasiado largo (esperado: 400)
+# errores: ["El nombre no puede tener más de 80 caracteres"]
+POST {{url}}
+Content-Type: application/json
+
+{
+  "nombre": "Este nombre es sumamente largo y excede por completo el límite de ochenta caracteres permitidos por la configuración de la entidad en la base de datos.",
+  "precio": 12000,
+  "incluyeClasesGrupales": true,
+  "duracionEnMeses": 12,
+  "descripcion": "Descripción válida para probar límite de nombre."
+}
+
+### 9. Campos de más: se ignoran (esperado: 201)
+# @name crearExtra
+POST {{url}}
+Content-Type: application/json
+
+{
+  "id": 999,
+  "createdAt": "2020-01-01",
+  "nombre": "Plan Básico",
+  "precio": 5000,
+  "incluyeClasesGrupales": false,
+  "duracionEnMeses": 1,
+  "descripcion": "Acceso básico únicamente a musculación."
+}
+
+### Guardar el id del segundo plan
+@idExtra = {{crearExtra.response.body.data.id}}
+
+### 10. Id que no es un número (esperado: 400)
+# "El id debe ser un número entero"
+GET {{url}}/abc
+
+### 11. Id que no existe (esperado: 404)
+# "Plan no encontrado"
+GET {{url}}/99999
+
+### 12. PUT completo (esperado: 200)
+PUT {{url}}/{{id}}
+Content-Type: application/json
+
+{
+  "nombre": "Plan Full Actualizado",
+  "precio": 18000.00,
+  "incluyeClasesGrupales": true,
+  "duracionEnMeses": 6,
+  "descripcion": "Acceso total extendido a 6 meses con modificaciones."
+}
+
+### 13. PATCH de una sola parte (esperado: 200)
+PATCH {{url}}/{{id}}
+Content-Type: application/json
+
+{ "precio": 19600.00 }
+
+### 14. PATCH sin datos (esperado: 400)
+# "No hay datos para modificar"
+PATCH {{url}}/{{id}}
+Content-Type: application/json
+
+{}
+
+### 15. Eliminar el primero (esperado: 200)
+# "Plan eliminado"
+DELETE {{url}}/{{id}}
+
+### 16. Ver el eliminado (esperado: 404)
+# "Plan no encontrado"
+GET {{url}}/{{id}}
+
+### 17. Eliminar el segundo (esperado: 200)
+DELETE {{url}}/{{idExtra}}
+
+### 18. Listar para confirmar que quedó vacío (esperado: 200 y data vacío)
+GET {{url}}

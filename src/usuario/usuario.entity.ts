@@ -1,5 +1,6 @@
-import { Entity, Enum, Property } from '@mikro-orm/core';
+import { Entity, Enum, Property, OneToMany, Collection } from '@mikro-orm/core';
 import { BaseEntity } from '../shared/db/baseEntity.entity.js';
+import { Membresia } from '../membresia/membresia.entity.js';
 
 export enum RolUsuario {
   ADMIN = 'admin',
@@ -32,4 +33,9 @@ export class Usuario extends BaseEntity {
 
   @Property({ nullable: true })
   telefono?: string;
+
+  // Relación: 1 Usuario (con rol cliente) puede tener N Membresías
+  @OneToMany(() => Membresia, (membresia) => membresia.usuario)
+  membresias = new Collection<Membresia>(this);
+
 }

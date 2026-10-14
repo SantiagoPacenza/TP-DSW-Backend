@@ -123,7 +123,7 @@ async function findOne(req: Request, res: Response) {
 async function add(req: Request, res: Response) {
   try {
     const datos = req.body.sanitizedInput;
-
+    
     const disciplina = em.create(Disciplina, datos);
     await em.flush();
 

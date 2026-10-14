@@ -2,6 +2,7 @@ import { Entity, Enum, Property, OneToMany, Collection } from '@mikro-orm/core';
 import { BaseEntity } from '../shared/db/baseEntity.entity.js';
 import type { Membresia } from '../membresia/membresia.entity.js';
 import type { Inscripcion } from '../inscripcion/inscripcion.entity.js';
+import type { Solicitud } from '../solicitud/solicitud.entity.js';
 
 export enum RolUsuario {
   ADMIN = 'admin',
@@ -43,4 +44,7 @@ export class Usuario extends BaseEntity {
   @OneToMany(() => 'Inscripcion', (inscripcion: Inscripcion) => inscripcion.usuario)
   inscripciones = new Collection<Inscripcion>(this);
 
+  // Relación: 1 Usuario puede tener N Solicitudes
+  @OneToMany(() => 'Solicitud', (solicitud: Solicitud) => solicitud.cliente)
+  solicitudes = new Collection<Solicitud>(this);
 }

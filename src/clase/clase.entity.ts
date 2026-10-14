@@ -2,6 +2,7 @@ import { Entity, Enum, Property, OneToMany, ManyToOne, Collection } from '@mikro
 import { BaseEntity } from '../shared/db/baseEntity.entity.js';
 import type { Inscripcion } from '../inscripcion/inscripcion.entity.js';
 import type { Disciplina } from '../disciplina/disciplina.entity.js';
+import type { Usuario } from '../usuario/usuario.entity.js';
 
 @Entity()
 export class Clase extends BaseEntity {
@@ -25,6 +26,10 @@ export class Clase extends BaseEntity {
   // Relación: Muchas Clases pertenecen a 1 sola Disciplina (obligatorio)
   @ManyToOne(() => 'Disciplina', { nullable: false })
   disciplina!: Disciplina;
+
+  // Relación: Muchas Clases pertenecen a 1 solo Usuario de rol Entrenador (obligatorio)
+  @ManyToOne(() => 'Usuario', { nullable: false })
+  usuario!: Usuario;
   
 }
 

@@ -9,7 +9,7 @@ POST {{url}}
 Content-Type: application/json
 
 {
-  "nombre": "Functional Training",
+  "nombre": "Functional Training2",
   "descripcion": "Entrenamiento funcional de alta intensidad enfocado en la fuerza y resistencia."
 }
 

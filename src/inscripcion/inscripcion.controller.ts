@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { manejarError } from '../shared/utils.js';
 import { orm } from '../shared/db/orm.js';
 import { Inscripcion, EstadoInscripcion } from './inscripcion.entity.js';
-import { Usuario } from '../usuario/usuario.entity.js';
+import { Usuario, RolUsuario } from '../usuario/usuario.entity.js';
 import { Clase } from '../clase/clase.entity.js';
 
 const em = orm.em;
@@ -68,7 +68,7 @@ async function add(req: Request, res: Response) {
     }
 
     // ¡VALIDACIÓN DE ROL! Aseguramos que solo un usuario con rol 'cliente' pueda inscribirse a una clase
-    if (usuarioEntity.rol !== 'cliente') {
+    if (usuarioEntity.rol !== RolUsuario.CLIENTE) {
       return res.status(400).json({ 
         message: 'Error de validación', 
         errores: ['Solo los usuarios con rol de cliente pueden inscribirse a las clases.'] 

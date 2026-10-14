@@ -14,6 +14,7 @@ function sanitizeSolicitudInput(
 ) {
   const body = req.body;
   const errores: string[] = [];
+  const esParcial = req.method === 'PATCH';
 
   if (
     typeof body !== 'object' ||
@@ -32,7 +33,7 @@ function sanitizeSolicitudInput(
     const valor = body[campo];
 
     if (valor === undefined) {
-      if (req.method !== 'PATCH') {
+      if (!esParcial) {
         errores.push(`El campo ${campo} es obligatorio`);
       }
     } else if (
@@ -45,7 +46,7 @@ function sanitizeSolicitudInput(
   }
 
   if (body.objetivo === undefined) {
-    if (req.method !== 'PATCH') {
+    if (!esParcial) {
       errores.push('El objetivo es obligatorio');
     }
   } else if (
@@ -58,7 +59,7 @@ function sanitizeSolicitudInput(
   }
 
   if (body.clienteId === undefined) {
-    if (req.method !== 'PATCH') {
+    if (!esParcial) {
       errores.push('El clienteId es obligatorio');
     }
   } else if (

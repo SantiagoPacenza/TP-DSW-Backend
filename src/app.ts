@@ -10,6 +10,7 @@ import { planRouter } from './plan/plan.routes.js';
 import { membresiaRouter } from './membresia/membresia.routes.js';
 import { claseRouter } from './clase/clase.routes.js';
 import { inscripcionRouter } from './inscripcion/inscripcion.routes.js';
+import { solicitudRouter } from './solicitud/solicitud.routes.js';
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use('/api/planes', planRouter);
 app.use('/api/membresias', membresiaRouter);
 app.use('/api/clases', claseRouter);
 app.use('/api/inscripciones', inscripcionRouter);
+app.use('/api/solicitudes', solicitudRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });

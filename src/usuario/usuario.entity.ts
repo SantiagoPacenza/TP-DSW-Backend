@@ -1,10 +1,18 @@
-import { Entity, Enum, Property, OneToMany, ManyToMany, Collection } from '@mikro-orm/core';
+import {
+  Entity,
+  Enum,
+  Property,
+  OneToMany,
+  ManyToMany,
+  Collection,
+} from '@mikro-orm/core';
 import { BaseEntity } from '../shared/db/baseEntity.entity.js';
 import type { Membresia } from '../membresia/membresia.entity.js';
 import type { Inscripcion } from '../inscripcion/inscripcion.entity.js';
 import type { Solicitud } from '../solicitud/solicitud.entity.js';
 import type { Clase } from '../clase/clase.entity.js';
-import type { Disciplina  } from '../disciplina/disciplina.entity.js';
+import type { Disciplina } from '../disciplina/disciplina.entity.js';
+import type { Rutina } from '../rutina/rutina.entity.js';
 
 export enum RolUsuario {
   ADMIN = 'admin',
@@ -43,7 +51,10 @@ export class Usuario extends BaseEntity {
   membresias = new Collection<Membresia>(this);
 
   // Relación: 1 Usuario (con rol cliente) puede tener N Inscripciones
-  @OneToMany(() => 'Inscripcion', (inscripcion: Inscripcion) => inscripcion.usuario)
+  @OneToMany(
+    () => 'Inscripcion',
+    (inscripcion: Inscripcion) => inscripcion.usuario,
+  )
   inscripciones = new Collection<Inscripcion>(this);
 
   // Relación: 1 Usuario puede tener N Solicitudes
@@ -54,7 +65,13 @@ export class Usuario extends BaseEntity {
   clases = new Collection<Clase>(this);
 
   // Relación Muchos a Muchos: Un Usuario esta habilitado para muchas Disciplinas (y es el dueño de la relación)
-  @ManyToMany(() => 'Disciplina', (disciplina: Disciplina) => disciplina.usuarios, { owner: true })
+  @ManyToMany(
+    () => 'Disciplina',
+    (disciplina: Disciplina) => disciplina.usuarios,
+    { owner: true },
+  )
   disciplinas = new Collection<Disciplina>(this);
-  
+
+  @OneToMany(() => 'Rutina', (rutina: Rutina) => rutina.entrenador)
+  rutinas = new Collection<Rutina>(this);
 }

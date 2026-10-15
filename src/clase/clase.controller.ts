@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { leerId, manejarError } from '../shared/utils.js';
 import { orm } from '../shared/db/orm.js';
+import { Usuario, RolUsuario } from '../usuario/usuario.entity.js';
 import { Clase, DiaSemana } from './clase.entity.js';
 import { Disciplina } from '../disciplina/disciplina.entity.js';
 
@@ -34,6 +35,20 @@ async function add(req: Request, res: Response) {
   try {
     const datosLimpios = req.body.sanitizedInput;
 
+    // Verificar que el Usuario relacionado exista
+    const usuarioEntity = await em.findOne(Usuario, { id: datosLimpios.usuarioId });
+    if (!usuarioEntity) {
+      return res.status(404).json({ message: 'El Usuario asociado no existe' });
+    }
+
+    // ¡VALIDACIÓN DE ROL! Aseguramos que solo un usuario con rol 'entrenador' pueda asociarse con una clase
+    if (usuarioEntity.rol !== RolUsuario.ENTRENADOR) {
+      return res.status(400).json({ 
+        message: 'Error de validación', 
+        errores: ['Solo los usuarios con rol de entrenador pueden inscribirse a las clases.'] 
+      });
+    }
+
     // Verificar que la Disciplina relacionada exista
     const disciplinaEntity = await em.findOne(Disciplina, { id: datosLimpios.disciplinaId });
     if (!disciplinaEntity) {
@@ -41,7 +56,9 @@ async function add(req: Request, res: Response) {
     }
 
     datosLimpios.disciplina = disciplinaEntity;
+    datosLimpios.usuario = usuarioEntity;
     delete datosLimpios.disciplinaId;
+    delete datosLimpios.usuarioId;
 
     const clase = em.create(Clase, datosLimpios);
     await em.flush();
@@ -63,9 +80,22 @@ async function update(req: Request, res: Response) {
     
     const datosLimpios = req.body.sanitizedInput;
 
+    // Si mandan usuarioId en el update, verificar que exista
+    if (datosLimpios.usuarioId !== undefined) {
+      const usuarioEntity = await em.findOne(Usuario, { id: datosLimpios.usuarioId });
+
+      if (!usuarioEntity) {
+        return res.status(404).json({ message: 'El Usuario asociado no existe' });
+      }
+
+      datosLimpios.usuario = usuarioEntity;
+      delete datosLimpios.usuarioId;
+    }
+
     // Si mandan disciplinaId en el update, verificar que exista
     if (datosLimpios.disciplinaId !== undefined) {
       const disciplinaEntity = await em.findOne(Disciplina, { id: datosLimpios.disciplinaId });
+
       if (!disciplinaEntity) {
         return res.status(404).json({ message: 'La Disciplina asociada no existe' });
       }
@@ -149,6 +179,14 @@ function sanitizeClaseInput(req: Request, res: Response, next: NextFunction) {
 
   } else if (typeof body.horaFin !== 'string' || !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(body.horaFin)) {
     errores.push('La hora de fin debe tener el formato HH:mm');
+  }
+
+  // Validar 'usuarioId' (debe venir el ID o la referencia)
+  if (body.usuarioId === undefined) {
+    if (req.method !== 'PATCH') errores.push('El entrenador es obligatorio');
+
+  } else if (typeof body.usuarioId !== 'number') {
+    errores.push('El id del entrenador debe ser un número');
   }
 
   // Validar 'disciplinaId' (debe venir el ID o la referencia)

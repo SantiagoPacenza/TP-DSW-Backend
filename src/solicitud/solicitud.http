@@ -1,0 +1,122 @@
+
+@url = http://localhost:3000/api/solicitudes
+
+# IMPORTANTE: reemplazá 1 por el ID de un usuario existente
+# cuyo rol sea "cliente".
+@clienteId = 1
+
+### 1. Listar solicitudes (esperado: 200)
+GET {{url}}
+
+### 2. Crear una solicitud (esperado: 201)
+# @name crear
+POST {{url}}
+Content-Type: application/json
+
+{
+  "clienteId": {{clienteId}},
+  "peso": 75,
+  "masaMuscular": 32,
+  "altura": 1.80,
+  "objetivo": "Aumentar masa muscular",
+  "lesionesPrevias": "Ninguna"
+}
+
+### Guardar el ID de la solicitud creada
+@id = {{crear.response.body.data.id}}
+
+### 3. Consultar la solicitud creada (esperado: 200)
+GET {{url}}/{{id}}
+
+### 4. Crear sin objetivo (esperado: 400)
+POST {{url}}
+Content-Type: application/json
+
+{
+  "clienteId": {{clienteId}},
+  "peso": 75,
+  "masaMuscular": 32,
+  "altura": 1.80
+}
+
+### 5. Crear con peso inválido (esperado: 400)
+POST {{url}}
+Content-Type: application/json
+
+{
+  "clienteId": {{clienteId}},
+  "peso": -5,
+  "masaMuscular": 32,
+  "altura": 1.80,
+  "objetivo": "Aumentar masa muscular"
+}
+
+### 6. Crear con cliente inexistente (esperado: 400)
+POST {{url}}
+Content-Type: application/json
+
+{
+  "clienteId": 99999,
+  "peso": 75,
+  "masaMuscular": 32,
+  "altura": 1.80,
+  "objetivo": "Aumentar masa muscular"
+}
+
+### 7. ID que no es un número (esperado: 400)
+GET {{url}}/abc
+
+### 8. ID inexistente (esperado: 404)
+GET {{url}}/99999
+
+### 9. Actualizar solicitud completa (esperado: 200)
+PUT {{url}}/{{id}}
+Content-Type: application/json
+
+{
+  "clienteId": {{clienteId}},
+  "peso": 76,
+  "masaMuscular": 33,
+  "altura": 1.80,
+  "objetivo": "Aumentar masa muscular",
+  "lesionesPrevias": "Ninguna"
+}
+
+### 10. Actualizar solo el objetivo (esperado: 200)
+PATCH {{url}}/{{id}}
+Content-Type: application/json
+
+{
+  "objetivo": "Mejorar fuerza y resistencia"
+}
+
+### 11. Cambiar el estado (esperado: 200)
+PATCH {{url}}/{{id}}
+Content-Type: application/json
+
+{
+  "estado": "aprobada"
+}
+
+### 12. Enviar un estado inválido (esperado: 400)
+PATCH {{url}}/{{id}}
+Content-Type: application/json
+
+{
+  "estado": "cualquier_estado"
+}
+
+### 13. PATCH sin datos (esperado: 400)
+PATCH {{url}}/{{id}}
+Content-Type: application/json
+
+{}
+
+### 14. Eliminar solicitud (esperado: 200)
+DELETE {{url}}/{{id}}
+
+### 15. Consultar la solicitud eliminada (esperado: 404)
+GET {{url}}/{{id}}
+
+### 16. Listar solicitudes al finalizar (esperado: 200)
+GET {{url}}

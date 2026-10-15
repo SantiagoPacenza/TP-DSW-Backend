@@ -2,6 +2,7 @@ import { Entity, Enum, Property, OneToMany, ManyToMany, Collection } from '@mikr
 import { BaseEntity } from '../shared/db/baseEntity.entity.js';
 import type { Membresia } from '../membresia/membresia.entity.js';
 import type { Inscripcion } from '../inscripcion/inscripcion.entity.js';
+import type { Solicitud } from '../solicitud/solicitud.entity.js';
 import type { Clase } from '../clase/clase.entity.js';
 import type { Disciplina  } from '../disciplina/disciplina.entity.js';
 
@@ -45,6 +46,9 @@ export class Usuario extends BaseEntity {
   @OneToMany(() => 'Inscripcion', (inscripcion: Inscripcion) => inscripcion.usuario)
   inscripciones = new Collection<Inscripcion>(this);
 
+  // Relación: 1 Usuario puede tener N Solicitudes
+  @OneToMany(() => 'Solicitud', (solicitud: Solicitud) => solicitud.cliente)
+  solicitudes = new Collection<Solicitud>(this);
   // Relación: 1 Usuario (con rol entrenador) tiene asociadas las N Clases que dicta
   @OneToMany(() => 'Clase', (clase: Clase) => clase.usuario)
   clases = new Collection<Clase>(this);

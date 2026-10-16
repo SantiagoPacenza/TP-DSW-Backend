@@ -165,6 +165,15 @@ async function update(req: Request, res: Response) {
     }
 
     const datos = req.body.sanitizedInput;
+
+    if (datos.rol !== undefined && datos.rol !== usuario.rol) {
+    return res.status(409).json({
+    message:
+      'No se puede cambiar el rol de un usuario existente. ' +
+      'Debe crearse un nuevo usuario con el rol correspondiente.',
+      });
+    }
+
     // Solo se hashea si vino una contraseña nueva
     if (datos.contrasenia) {
       datos.contrasenia = await bcrypt.hash(datos.contrasenia, 10);

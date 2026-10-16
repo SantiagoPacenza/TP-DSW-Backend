@@ -10,13 +10,13 @@ Content-Type: application/json
 
 { 
   "rol": "cliente", 
-  "nombre": "Ana", 
+  "nombre": "Pepe", 
   "apellido": "Perez", 
-  "fechaNacimiento": "1995-04-12", 
-  "nombreUsuario": "anaperez", 
-  "email": "ana@mail.com", 
+  "fechaNacimiento": "1996-04-12", 
+  "nombreUsuario": "pepeperez", 
+  "email": "pepe@mail.com", 
   "contrasenia": "clave123", 
-  "telefono": "3415550000" 
+  "telefono": "3413232825" 
 }
 
 ### Guardar el id del usuario creado
@@ -244,3 +244,80 @@ DELETE {{url}}/{{idExtra}}
 
 ### 24. Listar para confirmar que quedo vacia (esperado: 200 y data vacio)
 GET {{url}}
+
+
+### 25. Crear un entrenador para probar U3 (esperado: 201)
+# @name crearEntrenador
+POST {{url}}
+Content-Type: application/json
+
+{
+  "rol": "entrenador",
+  "nombre": "Carlos",
+  "apellido": "Lopez",
+  "fechaNacimiento": "1990-05-15",
+  "nombreUsuario": "carlosentrenador",
+  "email": "carlos.entrenador@mail.com",
+  "contrasenia": "clave123"
+}
+
+### Guardar el ID del entrenador
+@idEntrenador = {{crearEntrenador.response.body.data.id}}
+
+### 26. Asignar disciplinas habilitadas (esperado: 200)
+# Requiere que existan las disciplinas con ID 1 y 2.
+PUT {{url}}/{{idEntrenador}}/disciplinas
+Content-Type: application/json
+
+{
+  "disciplinaIds": [2, 4]
+}
+
+### 27. Reemplazar las disciplinas habilitadas (esperado: 200)
+PUT {{url}}/{{idEntrenador}}/disciplinas
+Content-Type: application/json
+
+{
+  "disciplinaIds": [2]
+}
+
+### 28. Intentar asignar una disciplina inexistente (esperado: 400)
+PUT {{url}}/{{idEntrenador}}/disciplinas
+Content-Type: application/json
+
+{
+  "disciplinaIds": [999999]
+}
+
+### 29. Intentar asignar disciplinas a un cliente (esperado: 409)
+# @id debe seguir existiendo y corresponder a un cliente.
+PUT {{url}}/{{id}}/disciplinas
+Content-Type: application/json
+
+{
+  "disciplinaIds": [1]
+}
+
+### 30. Intentar asignar disciplinas a un usuario inexistente (esperado: 404)
+PUT {{url}}/99999/disciplinas
+Content-Type: application/json
+
+{
+  "disciplinaIds": [1]
+}
+
+### 31. Enviar IDs duplicados (esperado: 400)
+PUT {{url}}/{{idEntrenador}}/disciplinas
+Content-Type: application/json
+
+{
+  "disciplinaIds": [1, 1]
+}
+
+### 32. Quitar todas las disciplinas habilitadas (esperado: 200)
+PUT {{url}}/{{idEntrenador}}/disciplinas
+Content-Type: application/json
+
+{
+  "disciplinaIds": []
+}

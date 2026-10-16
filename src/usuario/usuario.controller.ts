@@ -3,6 +3,7 @@ import { leerId, manejarError } from '../shared/utils.js';
 import bcrypt from 'bcryptjs';
 import { orm } from '../shared/db/orm.js';
 import { Usuario, RolUsuario } from './usuario.entity.js';
+import { Disciplina } from '../disciplina/disciplina.entity.js';
 
 const em = orm.em;
 
@@ -186,6 +187,79 @@ async function update(req: Request, res: Response) {
   }
 }
 
+
+async function actualizarDisciplinas(req: Request, res: Response) {
+  try {
+    const id = leerId(req, res);
+    if (id === null) return;
+
+    const { disciplinaIds } = req.body ?? {};
+
+    // Validar que llegue una lista de IDs válidos.
+    if (
+      !Array.isArray(disciplinaIds) ||
+      !disciplinaIds.every(
+        (id: unknown) =>
+          typeof id === 'number' &&
+          Number.isInteger(id) &&
+          id > 0,
+      ) ||
+      new Set(disciplinaIds).size !== disciplinaIds.length
+    ) {
+      return res.status(400).json({
+        message:
+          'disciplinaIds debe ser una lista de IDs enteros positivos sin duplicados',
+      });
+    }
+
+    // Buscar al usuario.
+    const usuario = await em.findOne(Usuario, { id });
+
+    if (!usuario) {
+      return res.status(404).json({
+        message: 'Usuario no encontrado',
+      });
+    }
+
+    // Solo un entrenador puede tener disciplinas habilitadas.
+    if (usuario.rol !== RolUsuario.ENTRENADOR) {
+      return res.status(409).json({
+        message:
+          'Solo se pueden asignar disciplinas a un usuario con rol entrenador',
+      });
+    }
+
+    // Buscar las disciplinas recibidas.
+    const disciplinas = await em.find(Disciplina, {
+      id: { $in: disciplinaIds },
+    });
+
+    // Comprobar que todas existan.
+    if (disciplinas.length !== disciplinaIds.length) {
+      return res.status(400).json({
+        message: 'Una o más disciplinas no existen',
+      });
+    }
+
+    // Reemplazar las disciplinas habilitadas del entrenador.
+    usuario.disciplinas.set(disciplinas);
+
+    // Guardar los cambios en la base de datos.
+    await em.flush();
+
+    return res.status(200).json({
+      message: 'Disciplinas del entrenador actualizadas correctamente',
+      data: {
+        id: usuario.id,
+        disciplinaIds: disciplinas.map((disciplina) => disciplina.id),
+      },
+    });
+  } catch (error) {
+    manejarError(res, error);
+  }
+}
+
+
 // Se busca antes de borrar para poder responder 404 si no existe (getReference no avisa)
 async function remove(req: Request, res: Response) {
   try {
@@ -204,4 +278,4 @@ async function remove(req: Request, res: Response) {
   }
 }
 
-export { sanitizeUsuarioInput, findAll, findOne, add, update, remove };
+export { sanitizeUsuarioInput, findAll, findOne, add, update, remove, actualizarDisciplinas };

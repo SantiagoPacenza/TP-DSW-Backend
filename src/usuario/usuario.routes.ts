@@ -6,6 +6,7 @@ import {
   add,
   update,
   remove,
+  actualizarDisciplinas,
 } from './usuario.controller.js';
 
 export const usuarioRouter = Router();
@@ -13,6 +14,7 @@ export const usuarioRouter = Router();
 usuarioRouter.get('/', findAll);
 usuarioRouter.get('/:id', findOne);
 usuarioRouter.post('/', sanitizeUsuarioInput, add);
+usuarioRouter.put('/:id/disciplinas', actualizarDisciplinas);
 usuarioRouter.put('/:id', sanitizeUsuarioInput, update);
 usuarioRouter.patch('/:id', sanitizeUsuarioInput, update);
 usuarioRouter.delete('/:id', remove);

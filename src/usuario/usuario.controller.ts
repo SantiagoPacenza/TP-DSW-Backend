@@ -80,7 +80,13 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
     errores.push('La contraseña no puede estar vacía ni ser solo espacios');
   } else if (body.contrasenia.length < 8) {
     errores.push('La contraseña debe tener al menos 8 caracteres');
-  }
+  } else if (body.contrasenia.length > 72) {
+    errores.push('La contraseña no puede tener más de 72 caracteres');
+  } 
+  /*Agregué este último porque el algoritmo de bcrypt tiene un limite de 72byte
+  Si se supera, puede ignorar parte de la contraseña y provocar que dos contraseñas 
+  diferentes se consideren equivalentes
+  */
 
   const tel = body.telefono;
   if (tel !== undefined && tel !== null && typeof tel !== 'string') {

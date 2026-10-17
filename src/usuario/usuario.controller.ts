@@ -105,7 +105,7 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
     apellido: body.apellido?.trim(),
     fechaNacimiento: body.fechaNacimiento,
     nombreUsuario: body.nombreUsuario?.trim(),
-    email: body.email?.trim(),
+    email: body.email?.trim().toLowerCase(),
     contrasenia: body.contrasenia,
     telefono:
     typeof body.telefono === 'string'

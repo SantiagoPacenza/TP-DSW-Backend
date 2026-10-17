@@ -107,7 +107,10 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
     nombreUsuario: body.nombreUsuario?.trim(),
     email: body.email?.trim(),
     contrasenia: body.contrasenia,
-    telefono: body.telefono,
+    telefono:
+    typeof body.telefono === 'string'
+      ? body.telefono.trim() || null
+      : body.telefono,
   };
   Object.keys(datosLimpios).forEach((campo) => {
     if (datosLimpios[campo] === undefined) delete datosLimpios[campo];

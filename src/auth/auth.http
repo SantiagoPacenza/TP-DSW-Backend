@@ -9,8 +9,8 @@ Content-Type: application/json
   "nombre": "Carlos",
   "apellido": "Lopez",
   "fechaNacimiento": "1992-08-15",
-  "nombreUsuario": "carloslopez2",
-  "email": "carlos2@mail.com",
+  "nombreUsuario": "carloslopez",
+  "email": "carlos@mail.com",
   "contrasenia": "passwordSeguro123",
   "telefono": "3414445566"
 }

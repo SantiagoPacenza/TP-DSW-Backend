@@ -1,0 +1,41 @@
+@url = http://localhost:3000/api
+
+### ==========================================
+### PASO 0: LOGIN AUTOMÁTICO (Hacer clic en "Send Request" aquí una sola vez)
+### ==========================================
+# @name loginRequest
+POST {{url}}/login
+Content-Type: application/json
+
+{
+  "email": "carlos@mail.com",
+  "contrasenia": "passwordSeguro123"
+}
+
+### Extraemos automáticamente el token de la respuesta del bloque anterior
+@token = {{loginRequest.response.body.data}}
+
+
+### ==========================================
+### PRUEBAS QUE REQUIEREN AUTENTICACIÓN (Usan el token de arriba solas)
+### ==========================================
+
+### 1. Forzar error de ID inválido en una ruta protegida (Activará manejarError)
+### Observación: lo hemos clasificado como error de Backend por que allí se hace la validación
+GET {{url}}/usuarios/abc
+Authorization: Bearer {{token}}
+
+
+### ==========================================
+### PRUEBAS PÚBLICAS (No requieren token)
+### ==========================================
+
+### 2. Simular reporte de error desde el Frontend
+POST {{url}}/errores
+Content-Type: application/json
+
+{
+  "mensaje": "Error simulado desde el archivo REST Client",
+  "stackTrace": "Error at Test.render (App.tsx:10)",
+  "tipoError": "ClientRenderError"
+}

@@ -52,7 +52,7 @@ export const verificarToken = (req: Request, res: Response, next: NextFunction) 
 };
 
 // Middleware para verificar rol de los administradores
-export const verificarRolAdmin = (req: Request, res: Response, next: NextFunction) => {
+export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
     const usuario = req.body.usuario as any;
 
     if (!usuario || usuario.rol !== RolUsuario.ADMIN) {
@@ -63,7 +63,7 @@ export const verificarRolAdmin = (req: Request, res: Response, next: NextFunctio
 };
 
 // Middleware para verificar rol de los entrenadores
-export const verificarRolEntrenador = (req: Request, res: Response, next: NextFunction) => {
+export const isEntrenador = (req: Request, res: Response, next: NextFunction) => {
     const usuario = req.body.usuario as any;
 
     if (!usuario || usuario.rol !== RolUsuario.ENTRENADOR) {
@@ -74,7 +74,7 @@ export const verificarRolEntrenador = (req: Request, res: Response, next: NextFu
 };
 
 // Middleware para verificar rol de los clientes
-export const verificarRolCliente = (req: Request, res: Response, next: NextFunction) => {
+export const isCliente = (req: Request, res: Response, next: NextFunction) => {
     const usuario = req.body.usuario as any;
 
     if (!usuario || usuario.rol !== RolUsuario.CLIENTE) {
@@ -85,7 +85,7 @@ export const verificarRolCliente = (req: Request, res: Response, next: NextFunct
 };
 
 // Middleware que permite acceso solo a Admin o Cliente
-export const verificarAdminCliente = (req: Request, res: Response, next: NextFunction) => {
+export const isAdminCliente = (req: Request, res: Response, next: NextFunction) => {
     const usuario = req.body.usuario as any;
 
     if (!usuario || ![RolUsuario.ADMIN, RolUsuario.CLIENTE].includes(usuario.rol)) {
@@ -96,7 +96,7 @@ export const verificarAdminCliente = (req: Request, res: Response, next: NextFun
 };
 
 // Middleware que permite acceso solo a Admin o Entrenador
-export const verificarAdminEntrenador = (req: Request, res: Response, next: NextFunction) => {
+export const isAdminEntrenador = (req: Request, res: Response, next: NextFunction) => {
     const usuario = req.body.usuario as any;
 
     if (!usuario || ![RolUsuario.ADMIN, RolUsuario.ENTRENADOR].includes(usuario.rol)) {
@@ -107,7 +107,7 @@ export const verificarAdminEntrenador = (req: Request, res: Response, next: Next
 };
 
 // Middleware que permite acceso solo a Cliente o Entrenador
-export const verificarClienteEntrenador = (req: Request, res: Response, next: NextFunction) => {
+export const isClienteEntrenador = (req: Request, res: Response, next: NextFunction) => {
     const usuario = req.body.usuario as any;
 
     if (!usuario || ![RolUsuario.CLIENTE, RolUsuario.ENTRENADOR].includes(usuario.rol)) {

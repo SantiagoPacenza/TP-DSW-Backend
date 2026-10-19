@@ -15,8 +15,8 @@ export const solicitudRouter = Router();
 solicitudRouter.get('/'       , verificarToken, isAdminEntrenador, findAll);
 solicitudRouter.get('/:id'    , verificarToken, findOne); // Los 3
 solicitudRouter.post('/'      , verificarToken, isCliente, sanitizeSolicitudInput, add);
-solicitudRouter.put('/:id'    , verificarToken, isCliente, sanitizeSolicitudInput, update);
-solicitudRouter.patch('/:id'  , verificarToken, isCliente, sanitizeSolicitudInput, update);
+solicitudRouter.put('/:id'    , verificarToken, isAdminEntrenador, sanitizeSolicitudInput, update);
+solicitudRouter.patch('/:id'  , verificarToken, isAdminEntrenador, sanitizeSolicitudInput, update);
 solicitudRouter.delete('/:id' , verificarToken, isCliente, remove);
 
 

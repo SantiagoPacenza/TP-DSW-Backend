@@ -115,44 +115,4 @@ export const isClienteEntrenador = (req: Request, res: Response, next: NextFunct
     }
 
     next();
-<<<<<<< HEAD
 };
-
-
-/**
- * Permite modificar el estado de una solicitud
- * solamente a administradores y entrenadores.
- */
-export const verificarPermisoEstadoSolicitud = (
-    req: Request,
-    res: Response,
-    next: NextFunction
-) => {
-    // Si no se intenta modificar el estado, continúa.
-    if (req.body?.estado === undefined) {
-        return next();
-    }
-
-    // Obtenemos el usuario identificado por el token.
-    const usuario = (req as any).usuario;
-
-    // Comprobamos que tenga uno de los roles permitidos.
-    if (
-        !usuario ||
-        ![
-            RolUsuario.ADMIN,
-            RolUsuario.ENTRENADOR
-        ].includes(usuario.rol)
-    ) {
-        return res.status(403).json({
-            message:
-                'Solo administradores y entrenadores pueden modificar el estado de una solicitud.'
-        });
-    }
-
-    // El usuario tiene permiso para cambiar el estado.
-    next();
-};
-=======
-};
->>>>>>> origin/main

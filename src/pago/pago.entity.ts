@@ -26,3 +26,5 @@ export class Pago {
   @ManyToOne(() => Membresia, { primary: true, nullable: false, })
   membresia!: Membresia;
 }
+
+//sssssssssssssssssssssssss

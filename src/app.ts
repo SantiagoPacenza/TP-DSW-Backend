@@ -12,12 +12,12 @@ import { claseRouter } from './clase/clase.routes.js';
 import { inscripcionRouter } from './inscripcion/inscripcion.routes.js';
 import { solicitudRouter } from './solicitud/solicitud.routes.js';
 import { rutinaRouter } from './rutina/rutina.routes.js';
-<<<<<<< Updated upstream
+
 import { authRouter } from './auth/auth.routes.js'
 import { erroresRouter } from './errors/error.routes.js';
-=======
+
 import { pagoRouter } from './pago/pago.routes.js';
->>>>>>> Stashed changes
+
 
 const app = express();
 
@@ -38,12 +38,11 @@ app.use('/api/clases', claseRouter);
 app.use('/api/inscripciones', inscripcionRouter);
 app.use('/api/solicitudes', solicitudRouter);
 app.use('/api/rutinas', rutinaRouter);
-<<<<<<< Updated upstream
+
 app.use('/api/', authRouter);
 app.use('/api/errores', erroresRouter);
-=======
+
 app.use('/api/pagos', pagoRouter);
->>>>>>> Stashed changes
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });

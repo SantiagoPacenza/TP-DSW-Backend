@@ -10,3 +10,5 @@ pagoRouter.put('/:membresiaId/:idPago', sanitizePagoInput, update);
 pagoRouter.patch('/:membresiaId/:idPago', sanitizePagoInput, update);
 pagoRouter.patch('/:membresiaId/:idPago/confirmar', confirmarPago);
 pagoRouter.delete('/:membresiaId/:idPago', remove);
+
+//sssssssssssssssssssssssss

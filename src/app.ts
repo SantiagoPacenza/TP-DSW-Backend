@@ -12,6 +12,9 @@ import { claseRouter } from './clase/clase.routes.js';
 import { inscripcionRouter } from './inscripcion/inscripcion.routes.js';
 import { solicitudRouter } from './solicitud/solicitud.routes.js';
 import { rutinaRouter } from './rutina/rutina.routes.js';
+import { categoriaRouter } from './categoria/categoria.routes.js';
+import { ejercicioRouter } from './ejercicio/ejercicio.routes.js';
+import { ejercicioRutinaRouter } from './ejercicioRutina/ejercicioRutina.routes.js';
 
 const app = express();
 
@@ -32,6 +35,9 @@ app.use('/api/clases', claseRouter);
 app.use('/api/inscripciones', inscripcionRouter);
 app.use('/api/solicitudes', solicitudRouter);
 app.use('/api/rutinas', rutinaRouter);
+app.use('/api/categorias', categoriaRouter);
+app.use('/api/ejercicios', ejercicioRouter);
+app.use('/api/ejerciciosRutina', ejercicioRutinaRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });

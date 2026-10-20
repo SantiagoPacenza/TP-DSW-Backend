@@ -13,7 +13,8 @@ Content-Type: application/json
   "diaSemana": "lunes",
   "horaInicio": "08:00",
   "horaFin": "09:00",
-  "disciplinaId": 1
+  "disciplinaId": 1,
+  "usuarioId": 7
 }
 
 ### Guardar el id de la clase creada

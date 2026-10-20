@@ -207,7 +207,8 @@ function sanitizeClaseInput(req: Request, res: Response, next: NextFunction) {
     diaSemana: body.diaSemana,
     horaInicio: body.horaInicio.trim(),
     horaFin: body.horaFin.trim(),
-    disciplinaId: body.disciplinaId
+    disciplinaId: body.disciplinaId,
+    usuarioId: body.usuarioId
   };
   
   Object.keys(datosLimpios).forEach((campo) => {

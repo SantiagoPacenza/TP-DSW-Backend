@@ -52,3 +52,57 @@ export function manejarError(res: Response, error: unknown, mensajePersonalizado
   return res.status(500).json({ message: 'Error interno del servidor' });
 
 }
+
+
+/**
+ * Devuelve la fecha actual en hora local del servidor.
+ * Formato: YYYY-MM-DD
+ */
+export function hoyISO(): string {
+    const hoy = new Date();
+    const anio = hoy.getFullYear();
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoy.getDate()).padStart(2, '0');
+
+    return `${anio}-${mes}-${dia}`;
+}
+
+/**
+ * Comprueba que el texto represente una fecha real YYYY-MM-DD.
+ */
+export function esFechaValida(texto: string): boolean {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(texto)) {
+        return false;
+    }
+
+    const [anio, mes, dia] = texto.split('-').map(Number);
+
+    const fecha = new Date(Date.UTC(anio, mes - 1, dia));
+
+    return (
+        fecha.getUTCFullYear() === anio &&
+        fecha.getUTCMonth() === mes - 1 &&
+        fecha.getUTCDate() === dia
+    );
+}
+
+/**
+ * Suma meses sin desbordar el último día del mes.
+ */
+export function sumarMeses(fecha: string, meses: number): string {
+    const [anio, mes, dia] = fecha.split('-').map(Number);
+
+    const destino = new Date(Date.UTC(anio, mes - 1 + meses, 1));
+
+    const ultimoDia = new Date(
+        Date.UTC(
+            destino.getUTCFullYear(),
+            destino.getUTCMonth() + 1,
+            0
+        )
+    ).getUTCDate();
+
+    destino.setUTCDate(Math.min(dia, ultimoDia));
+
+    return destino.toISOString().slice(0, 10);
+}

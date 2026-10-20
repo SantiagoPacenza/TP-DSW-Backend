@@ -13,6 +13,12 @@ import { inscripcionRouter } from './inscripcion/inscripcion.routes.js';
 import { solicitudRouter } from './solicitud/solicitud.routes.js';
 import { rutinaRouter } from './rutina/rutina.routes.js';
 
+import { authRouter } from './auth/auth.routes.js'
+import { erroresRouter } from './errors/error.routes.js';
+
+import { pagoRouter } from './pago/pago.routes.js';
+
+
 const app = express();
 
 app.use(cors());
@@ -32,6 +38,11 @@ app.use('/api/clases', claseRouter);
 app.use('/api/inscripciones', inscripcionRouter);
 app.use('/api/solicitudes', solicitudRouter);
 app.use('/api/rutinas', rutinaRouter);
+
+app.use('/api/', authRouter);
+app.use('/api/errores', erroresRouter);
+
+app.use('/api/pagos', pagoRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });

@@ -1,0 +1,90 @@
+@url = http://localhost:3000/api/pagos
+
+### 1. Obtener todos los pagos
+GET {{url}}
+
+### 2. Obtener un pago por sus claves
+# Reemplazar 1 y 1 por el id de una membresía y el id de su pago
+GET {{url}}/1/1
+
+### 3. Crear un pago para una membresía existente
+# @name crearPago
+POST {{url}}
+Content-Type: application/json
+
+{
+  "membresiaId": 1,
+  "monto": 25000,
+  "metodoPago": "transferencia",
+  "fechaLimitePago": "2026-11-10",
+  "fechaPago": null
+}
+
+### 4. Crear un pago con datos inválidos (esperado: 400)
+POST {{url}}
+Content-Type: application/json
+
+{
+  "membresiaId": 1,
+  "monto": -100,
+  "metodoPago": "",
+  "fechaLimitePago": "2026-02-30"
+}
+
+### 5. Crear un pago para una membresía inexistente (esperado: 404)
+POST {{url}}
+Content-Type: application/json
+
+{
+  "membresiaId": 99999,
+  "monto": 25000,
+  "metodoPago": "efectivo",
+  "fechaLimitePago": "2026-11-10",
+  "fechaPago": null
+}
+
+### 6. Actualizar todos los campos con PUT
+PUT {{url}}/1/1
+Content-Type: application/json
+
+{
+  "monto": 30000,
+  "metodoPago": "efectivo",
+  "fechaLimitePago": "2026-11-15",
+}
+
+### 7. Actualizar solamente el método con PATCH
+PATCH {{url}}/1/1
+Content-Type: application/json
+
+{
+  "metodoPago": "transferencia"
+}
+
+
+### 9. Intentar actualizar un pago inexistente (esperado: 404)
+PATCH {{url}}/1/99999
+Content-Type: application/json
+
+{
+  "metodoPago": "efectivo"
+}
+
+### 10. Eliminar un pago
+DELETE {{url}}/1/1
+
+### 11. Comprobar que el pago eliminado ya no existe (esperado: 404)
+GET {{url}}/1/1
+
+
+
+/* por ahora lo ejecutamos manualmente para probarlo. 
+luego lo conectaremos con el front donde habrá un boton de confirmar pagar */
+### Confirmar que el pago fue abonado
+PATCH {{url}}/1/1/confirmar
+
+### Consultar el pago y comprobar la fecha registrada
+GET {{url}}/1/1
+
+### Intentar confirmar nuevamente (esperado: 409)
+PATCH {{url}}/1/1/confirmar

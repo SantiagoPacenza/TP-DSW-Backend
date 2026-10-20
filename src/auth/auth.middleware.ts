@@ -115,6 +115,7 @@ export const isClienteEntrenador = (req: Request, res: Response, next: NextFunct
     }
 
     next();
+<<<<<<< HEAD
 };
 
 
@@ -152,3 +153,6 @@ export const verificarPermisoEstadoSolicitud = (
     // El usuario tiene permiso para cambiar el estado.
     next();
 };
+=======
+};
+>>>>>>> origin/main

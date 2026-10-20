@@ -94,8 +94,8 @@ POST {{url}}
 Content-Type: application/json
 
 {
-  "usuarioId": 1,
-  "claseId": 2,
+  "usuarioId": 3,
+  "claseId": 1,
   "estadoInscripcion": "activa"
 }
 

@@ -1,0 +1,51 @@
+@url = http://localhost:3000/api
+
+### 1. Registrar un nuevo cliente (Esperado: 201 Created)
+POST {{url}}/registro
+Content-Type: application/json
+
+{
+  "rol": "cliente",
+  "nombre": "Carlos",
+  "apellido": "Lopez",
+  "fechaNacimiento": "1992-08-15",
+  "nombreUsuario": "carloslopez",
+  "email": "carlos@mail.com",
+  "contrasenia": "passwordSeguro123",
+  "telefono": "3414445566"
+}
+
+### 2. Login con credenciales correctas (Esperado: 200 OK + Retorna Token JWT)
+# @name loginRequest
+POST {{url}}/login
+Content-Type: application/json
+
+{
+  "email": "carlos@mail.com",
+  "contrasenia": "passwordSeguro123"
+}
+
+### Guardar automáticamente el token recibido en una variable
+@token = {{loginRequest.response.body.data}}
+
+### 3. Login con contraseña incorrecta (Esperado: 401 Unauthorized)
+POST {{url}}/login
+Content-Type: application/json
+
+{
+  "email": "carlos@mail.com",
+  "contrasenia": "claveFalsa"
+}
+
+### 4. Login con email inexistente (Esperado: 404 Not Found)
+POST {{url}}/login
+Content-Type: application/json
+
+{
+  "email": "noexiste@mail.com",
+  "contrasenia": "passwordSeguro123"
+}
+
+### 5. Probar una ruta protegida enviando el Token en el Header (Esperado: 200 OK si tiene permiso)
+GET {{url}}/usuarios
+Authorization: Bearer {{token}}

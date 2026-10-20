@@ -26,8 +26,11 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
 
   for (const campo of Object.keys(maxCaracteres)) {
     const valor = body[campo];
+
     if (valor === undefined) {
-      if (req.method !== 'PATCH') errores.push(`El ${campo} es obligatorio`);
+      if (req.method === 'POST' || req.method === 'PUT') {
+        errores.push(`El campo ${campo} es obligatorio`);
+      }
     } else if (typeof valor !== 'string' || valor.trim() === '') {
       errores.push(`El ${campo} debe ser un texto que no esté vacío`);
     } else if (valor.trim().length > maxCaracteres[campo]) {
@@ -112,6 +115,12 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
       ? body.telefono.trim() || null
       : body.telefono,
   };
+
+  // Agregar contraseña solo si vino en el body (en PUT/PATCH, si se actualizan otros datos no viene y es undefined)
+  if(body.contrasenia !== undefined){
+    datosLimpios.contrasenia = body.contrasenia;
+  }
+
   Object.keys(datosLimpios).forEach((campo) => {
     if (datosLimpios[campo] === undefined) delete datosLimpios[campo];
   });

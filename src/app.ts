@@ -15,6 +15,8 @@ import { rutinaRouter } from './rutina/rutina.routes.js';
 import { categoriaRouter } from './categoria/categoria.routes.js';
 import { ejercicioRouter } from './ejercicio/ejercicio.routes.js';
 import { ejercicioRutinaRouter } from './ejercicioRutina/ejercicioRutina.routes.js';
+import { authRouter } from './auth/auth.routes.js';
+import { erroresRouter } from './errors/error.routes.js';
 
 const app = express();
 
@@ -38,6 +40,8 @@ app.use('/api/rutinas', rutinaRouter);
 app.use('/api/categorias', categoriaRouter);
 app.use('/api/ejercicios', ejercicioRouter);
 app.use('/api/ejerciciosRutina', ejercicioRutinaRouter);
+app.use('/api/', authRouter);
+app.use('/api/errores', erroresRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });

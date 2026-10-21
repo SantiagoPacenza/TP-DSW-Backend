@@ -9,7 +9,7 @@ POST {{url}}
 Content-Type: application/json
 
 {
-  "fechaInicio": "2026-10-15",
+  "fechaInicio": "2026-10-22",
   "fechaFin": "2026-11-15",
   "estadoMembresia": "activa",
   "usuarioId": 1,

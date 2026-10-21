@@ -16,8 +16,7 @@ Content-Type: application/json
   "membresiaId": 1,
   "monto": 25000,
   "metodoPago": "transferencia",
-  "fechaLimitePago": "2026-11-10",
-  "fechaPago": null
+  "fechaLimitePago": "2026-11-10"
 }
 
 ### 4. Crear un pago con datos inválidos (esperado: 400)
@@ -40,7 +39,6 @@ Content-Type: application/json
   "monto": 25000,
   "metodoPago": "efectivo",
   "fechaLimitePago": "2026-11-10",
-  "fechaPago": null
 }
 
 ### 6. Actualizar todos los campos con PUT
@@ -50,7 +48,7 @@ Content-Type: application/json
 {
   "monto": 30000,
   "metodoPago": "efectivo",
-  "fechaLimitePago": "2026-11-15",
+  "fechaLimitePago": "2026-11-15"
 }
 
 ### 7. Actualizar solamente el método con PATCH
@@ -88,3 +86,5 @@ GET {{url}}/1/1
 
 ### Intentar confirmar nuevamente (esperado: 409)
 PATCH {{url}}/1/1/confirmar
+
+//sssssssssssssssssssssssss

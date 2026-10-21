@@ -84,13 +84,6 @@ function sanitizeSolicitudInput(
     errores.push('Las lesiones previas no pueden superar los 500 caracteres');
   }
 
-  if (body.estado !== undefined) {
-    if (!Object.values(EstadoSolicitud).includes(body.estado)) {
-      errores.push(
-        `El estado debe ser uno de: ${Object.values(EstadoSolicitud).join(', ')}`,
-      );
-    }
-  }
 
   if (errores.length > 0) {
     return res.status(400).json({
@@ -120,9 +113,6 @@ function sanitizeSolicitudInput(
       typeof lesiones === 'string' ? lesiones.trim() : null;
   }
 
-  if (body.estado !== undefined) {
-    datosLimpios.estado = body.estado;
-  }
 
   if (Object.keys(datosLimpios).length === 0) {
     return res.status(400).json({
@@ -268,10 +258,6 @@ async function update(req: Request, res: Response) {
     if (datos.lesionesPrevias !== undefined) {
       solicitud.lesionesPrevias =
         datos.lesionesPrevias as string | undefined;
-    }
-
-    if (datos.estado !== undefined) {
-      solicitud.estado = datos.estado as EstadoSolicitud;
     }
 
     await em.flush();

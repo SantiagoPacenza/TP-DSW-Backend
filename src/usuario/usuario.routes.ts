@@ -6,6 +6,7 @@ import {
   add,
   update,
   remove,
+  actualizarDisciplinas,
 } from './usuario.controller.js';
 import { verificarToken, isAdminEntrenador, isAdminCliente } from '../auth/auth.middleware.js';
 

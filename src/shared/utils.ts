@@ -106,3 +106,4 @@ export function sumarMeses(fecha: string, meses: number): string {
 
     return destino.toISOString().slice(0, 10);
 }
+

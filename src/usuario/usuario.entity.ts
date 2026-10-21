@@ -25,7 +25,7 @@ export class Usuario extends BaseEntity {
   @Enum(() => RolUsuario)
   rol!: RolUsuario;
 
-  @Property({ nullable: false })
+  @Property({ length: 30, nullable: false })
   nombre!: string;
 
   @Property({ nullable: false })
@@ -37,7 +37,7 @@ export class Usuario extends BaseEntity {
   @Property({ unique: true })
   nombreUsuario!: string;
 
-  @Property({ unique: true })
+  @Property({ length:100, unique: true })
   email!: string;
 
   @Property({ hidden: true })

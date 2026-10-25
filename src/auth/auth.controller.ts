@@ -11,75 +11,95 @@ const em = orm.em;
 
 // ENDPOINT DE REGISTRO (Usa bcrypt para hashear)
 export async function autoregistroCliente(req: Request, res: Response) {
+  try {
+    const datos = req.body.sanitizedInput;
+    const email = datos.email;
 
-    try {
-        const datos = req.body.sanitizedInput;
-        const email = datos.email;
+    // Busca en base de datos usando el email único del usuario
+    const validarExistencia = await em.findOne(Usuario, { email });
+    if (validarExistencia !== null) {
+      return res
+        .status(409)
+        .json({
+          message: 'El email ingresado ya está en uso. Ingrese otro email.',
+        });
+    }
 
-        // Busca en base de datos usando el email único del usuario
-        const validarExistencia = await em.findOne(Usuario, {email})
-        if (validarExistencia !== null) {
-            return res.status(400).json({message: 'El email ingresado ya está en uso. Ingrese otro email.'});
-        }
+    // Se guarda el hash de la contraseña, nunca el texto original
+    datos.contrasenia = await bcrypt.hash(datos.contrasenia, 10);
 
-        // Se guarda el hash de la contraseña, nunca el texto original
-        datos.contrasenia = await bcrypt.hash(datos.contrasenia, 10);
-        
-        // Le damos a todos los usuarios que se registren a través del autoregistro el rol de cliente
-        datos.rol = RolUsuario.CLIENTE; 
+    // Le damos a todos los usuarios que se registren a través del autoregistro el rol de cliente
+    datos.rol = RolUsuario.CLIENTE;
 
-        const usuario = em.create(Usuario, datos);
-        await em.flush(); // Acá MySQL rechaza los duplicados (-> 409)
+    const usuario = em.create(Usuario, datos);
+    await em.flush(); // Acá MySQL rechaza los duplicados (-> 409)
 
-        res.status(201).json({ message: 'Usuario registrado con éxito!', data: usuario });
-
-      } catch (error) {
-        manejarError(res, error, 'Problema al registrarse. Intentelo más tarde.');
-      }
-      
+    res
+      .status(201)
+      .json({ message: 'Usuario registrado con éxito!', data: usuario });
+  } catch (error) {
+    manejarError(res, error, {
+      mensajeDuplicado: 'El nombre de usuario o el email ya está en uso',
+      req,
+    });
+  }
 }
 
 // ENDPOINT DE LOGIN (Usa bcrypt para comparar y JWT para firmar)
-export async function loguearse (req: Request, res: Response) {
-    
-    try {
-        const { email, contrasenia } = req.body;
-    
-        if(!email || !contrasenia){
-            return res.status(400).json({message: 'Email y contraseña son obligatorios'});
-        }
+export async function loguearse(req: Request, res: Response) {
+  try {
+    const { email, contrasenia } = req.body;
 
-        // Busca en base de datos usando el email único del usuario
-        const usuario = await em.findOne(Usuario, { email });
-        if (!usuario) {
-          return res.status(404).json({ message: 'No existe usuario con el email ingresado. Ingrese un email válido.' });
-        }
+    if (!email || !contrasenia) {
+      return res
+        .status(400)
+        .json({ message: 'Email y contraseña son obligatorios' });
+    }
 
-        // Validación segura de contraseña (compara texto plano ingresado con el hash guardado en db)
-        const contraseniaEsCorrecta = await bcrypt.compare(contrasenia, usuario.contrasenia)
+    // Busca en base de datos usando el email único del usuario
+    const usuario = await em.findOne(Usuario, { email });
+    if (!usuario) {
+      return res
+        .status(404)
+        .json({
+          message:
+            'No existe usuario con el email ingresado. Ingrese un email válido.',
+        });
+    }
 
-        if(!contraseniaEsCorrecta){
-            return res.status(401).json({message: 'Contraseña incorrecta.' /*'Credenciales inválidas' para no revelar info*/});
-        }
+    // Validación segura de contraseña (compara texto plano ingresado con el hash guardado en db)
+    const contraseniaEsCorrecta = await bcrypt.compare(
+      contrasenia,
+      usuario.contrasenia,
+    );
 
-        // Si son correctas las credenciales generamos token jwt para el usuario logueado.
-        // El frontend solo recibe un único campo en el JSON de respuesta (por ejemplo: token: "eyJhbGciOiJIUzI1..."). 
-        // Osea, no recibe un objeto separado con los datos del usuario.
-        // Datos viajan al front como parte del payload o carga útil del JWT > Hay que decodificarlos allí.
-        const token = jwt.sign({ 
-            id: usuario.id,
-            nombre: usuario.nombre,
-            apellido: usuario.apellido,
-            rol: usuario.rol
-            
-        }, SECRET_KEY_JWT, { expiresIn: '1h' }
-        );
+    if (!contraseniaEsCorrecta) {
+      return res
+        .status(401)
+        .json({
+          message:
+            'Contraseña incorrecta.' /*'Credenciales inválidas' para no revelar info*/,
+        });
+    }
 
-        // Lo enviamos en la respuesta
-        return res.status(200).json({ message: '¡Login exitoso!', data: token });
+    // Si son correctas las credenciales generamos token jwt para el usuario logueado.
+    // El frontend solo recibe un único campo en el JSON de respuesta (por ejemplo: token: "eyJhbGciOiJIUzI1...").
+    // Osea, no recibe un objeto separado con los datos del usuario.
+    // Datos viajan al front como parte del payload o carga útil del JWT > Hay que decodificarlos allí.
+    const token = jwt.sign(
+      {
+        id: usuario.id,
+        nombre: usuario.nombre,
+        apellido: usuario.apellido,
+        rol: usuario.rol,
+      },
+      SECRET_KEY_JWT,
+      { expiresIn: '1h' },
+    );
 
-      } catch (error) {
-        manejarError(res, error, 'Problema al loguearse. Intentelo más tarde.');
-      }
-
+    // Lo enviamos en la respuesta
+    return res.status(200).json({ message: '¡Login exitoso!', data: token });
+  } catch (error) {
+    manejarError(res, error, { req });
+  }
 }

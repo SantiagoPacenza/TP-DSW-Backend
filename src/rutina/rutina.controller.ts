@@ -91,7 +91,7 @@ function sanitizeRutinaInput(req: Request, res: Response, next: NextFunction) {
 }
 
 // Obtener todas las rutinas
-async function findAll(_req: Request, res: Response) {
+async function findAll(req: Request, res: Response) {
   try {
     const rutinas = await em.find(Rutina, {}, { populate: ['entrenador'] });
 
@@ -100,7 +100,7 @@ async function findAll(_req: Request, res: Response) {
       data: rutinas,
     });
   } catch (error) {
-    manejarError(res, error, 'Error al obtener las rutinas.');
+    manejarError(res, error, { req });
   }
 }
 
@@ -127,7 +127,7 @@ async function findOne(req: Request, res: Response) {
       data: rutina,
     });
   } catch (error) {
-    manejarError(res, error, 'Error al obtener la rutina.');
+    manejarError(res, error, { req });
   }
 }
 
@@ -167,7 +167,7 @@ async function add(req: Request, res: Response) {
       data: rutina,
     });
   } catch (error) {
-    manejarError(res, error, 'Error al crear la rutina.');
+    manejarError(res, error, { req });
   }
 }
 
@@ -205,7 +205,7 @@ async function update(req: Request, res: Response) {
       data: rutina,
     });
   } catch (error) {
-    manejarError(res, error, 'Error al actualizar la rutina.');
+    manejarError(res, error, { req });
   }
 }
 
@@ -229,7 +229,7 @@ async function remove(req: Request, res: Response) {
       message: 'Rutina eliminada',
     });
   } catch (error) {
-    manejarError(res, error, 'Error al eliminar la rutina.');
+    manejarError(res, error, { req });
   }
 }
 

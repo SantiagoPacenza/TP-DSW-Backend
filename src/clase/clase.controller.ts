@@ -7,12 +7,12 @@ import { Disciplina } from '../disciplina/disciplina.entity.js';
 
 const em = orm.em;
 
-async function findAll(_req: Request, res: Response) {
+async function findAll(req: Request, res: Response) {
   try {
     const clases = await em.find(Clase, {});
     res.status(200).json({ message: 'Clases encontradas', data: clases });
   } catch (error) {
-    manejarError(res, error, 'Error al obtener las clases.');
+    manejarError(res, error, { req });
   }
 }
 
@@ -27,7 +27,7 @@ async function findOne(req: Request, res: Response) {
     }
     res.status(200).json({ message: 'Clase encontrada', data: clase });
   } catch (error) {
-    manejarError(res, error, 'Error al obtener la clase.');
+    manejarError(res, error, { req });
   }
 }
 
@@ -64,7 +64,7 @@ async function add(req: Request, res: Response) {
     await em.flush();
     res.status(201).json({ message: 'Clase creada', data: clase });
   } catch (error) {
-    manejarError(res, error, 'Error al crear nueva clase.');
+    manejarError(res, error, { req });
   }
 }
 
@@ -108,7 +108,7 @@ async function update(req: Request, res: Response) {
     res.status(200).json({ message: 'Clase actualizada', data: clase });
   
   } catch (error) {
-    manejarError(res, error, 'Error al actualizar clase.');
+    manejarError(res, error, { req });
   }
 }
 
@@ -126,7 +126,7 @@ async function remove(req: Request, res: Response) {
     res.status(200).json({ message: 'Clase eliminada' });
 
   } catch (error) {
-    manejarError(res, error, 'Error al eliminar clase.');
+    manejarError(res, error, { req });
   }
 }
 

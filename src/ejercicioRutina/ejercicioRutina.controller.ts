@@ -155,7 +155,7 @@ async function findAll(req: Request, res: Response) {
       data: renglones,
     });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 
@@ -181,7 +181,7 @@ async function findOne(req: Request, res: Response) {
       data: renglon,
     });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 
@@ -276,7 +276,9 @@ async function update(req: Request, res: Response) {
     });
   } catch (error) {
     manejarError(res, error, {
-      duplicado: 'Ya existe un ejercicio en ese día y orden de la rutina',
+      mensajeDuplicado:
+        'Ya existe un ejercicio en ese día y orden de la rutina',
+      req,
     });
   }
 }
@@ -300,7 +302,7 @@ async function remove(req: Request, res: Response) {
       message: 'Ejercicio quitado de la rutina',
     });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 

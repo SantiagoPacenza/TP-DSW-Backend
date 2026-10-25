@@ -11,12 +11,12 @@ import { Plan } from '../plan/plan.entity.js';
 
 const em = orm.em;
 
-async function findAll(_req: Request, res: Response) {
+async function findAll(req: Request, res: Response) {
   try {
     const membresias = await em.find(Membresia, {});
     res.status(200).json({ message: 'Membresias encontradas', data: membresias });
   } catch (error) {
-    manejarError(res, error, 'Error al obtener las membresias.');
+    manejarError(res, error, { req });
   }
 }
 
@@ -31,7 +31,7 @@ async function findOne(req: Request, res: Response) {
     }
     res.status(200).json({ message: 'Membresia encontrada', data: membresia });
   } catch (error) {
-    manejarError(res, error, 'Error al obtener la membresia.');
+    manejarError(res, error, { req });
   }
 }
 
@@ -69,7 +69,7 @@ async function add(req: Request, res: Response) {
     await em.flush();
     res.status(201).json({ message: 'Membresia creada', data: membresia });
   } catch (error) {
-    manejarError(res, error, 'Error al crear nueva membresia.');
+    manejarError(res, error, { req });
   }
 }
 
@@ -116,7 +116,7 @@ async function update(req: Request, res: Response) {
     res.status(200).json({ message: 'Membresia actualizada', data: membresia });
   
   } catch (error) {
-    manejarError(res, error, 'Error al actualizar membresia.');
+    manejarError(res, error, { req });
   }
 }
 
@@ -134,7 +134,11 @@ async function remove(req: Request, res: Response) {
     res.status(200).json({ message: 'Membresia eliminada' });
 
   } catch (error) {
-    manejarError(res, error, 'Error al eliminar membresia.');
+    manejarError(res, error, {
+      mensajeForeignKey:
+        'No se puede eliminar la membresía porque tiene pagos asociados',
+      req,
+    });
   }
 }
 

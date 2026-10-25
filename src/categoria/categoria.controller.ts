@@ -48,7 +48,7 @@ function sanitizeCategoriaInput(
   next();
 }
 
-async function findAll(_req: Request, res: Response) {
+async function findAll(req: Request, res: Response) {
   try {
     const categorias = await em.find(Categoria, {});
 
@@ -57,7 +57,7 @@ async function findAll(_req: Request, res: Response) {
       data: categorias,
     });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 
@@ -79,7 +79,7 @@ async function findOne(req: Request, res: Response) {
       data: categoria,
     });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 

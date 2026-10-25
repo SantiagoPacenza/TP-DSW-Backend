@@ -82,7 +82,7 @@ function sanitizeEjercicioInput(
   next();
 }
 
-async function findAll(_req: Request, res: Response) {
+async function findAll(req: Request, res: Response) {
   try {
     const ejercicios = await em.find(
       Ejercicio,
@@ -93,7 +93,7 @@ async function findAll(_req: Request, res: Response) {
       .status(200)
       .json({ message: 'Ejercicios encontrados', data: ejercicios });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 
@@ -119,7 +119,7 @@ async function findOne(req: Request, res: Response) {
       data: ejercicio,
     });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 

@@ -106,7 +106,7 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
   };
 
   // Agregar contraseña solo si vino en el body (en PUT/PATCH, si se actualizan otros datos no viene y es undefined)
-  if(body.contrasenia !== undefined){
+  if (body.contrasenia !== undefined) {
     datosLimpios.contrasenia = body.contrasenia;
   }
 
@@ -122,12 +122,12 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-async function findAll(_req: Request, res: Response) {
+async function findAll(req: Request, res: Response) {
   try {
     const usuarios = await em.find(Usuario, {});
     res.status(200).json({ message: 'Usuarios encontrados', data: usuarios });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 
@@ -142,7 +142,7 @@ async function findOne(req: Request, res: Response) {
     }
     res.status(200).json({ message: 'Usuario encontrado', data: usuario });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 
@@ -157,7 +157,10 @@ async function add(req: Request, res: Response) {
     await em.flush(); // Acá MySQL rechaza los duplicados (-> 409)
     res.status(201).json({ message: 'Usuario creado', data: usuario });
   } catch (error) {
-    manejarError(res, error, 'El nombre de usuario o el email ya está en uso');
+    manejarError(res, error, {
+      mensajeDuplicado: 'El nombre de usuario o el email ya está en uso',
+      req,
+    });
   }
 }
 
@@ -181,7 +184,10 @@ async function update(req: Request, res: Response) {
     await em.flush(); // 409 si nombreUsuario o email es el mismo que el de otro usuario
     res.status(200).json({ message: 'Usuario actualizado', data: usuario });
   } catch (error) {
-    manejarError(res, error, 'El nombre de usuario o el email ya está en uso');
+    manejarError(res, error, {
+      mensajeDuplicado: 'El nombre de usuario o el email ya está en uso',
+      req,
+    });
   }
 }
 
@@ -199,7 +205,11 @@ async function remove(req: Request, res: Response) {
     await em.remove(usuario).flush();
     res.status(200).json({ message: 'Usuario eliminado' });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, {
+      mensajeForeignKey:
+        'No se puede eliminar el usuario porque tiene membresías, solicitudes, clases o rutinas asociadas',
+      req,
+    });
   }
 }
 

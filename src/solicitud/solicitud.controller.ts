@@ -1,4 +1,3 @@
-
 import type { Request, Response, NextFunction } from 'express';
 import { orm } from '../shared/db/orm.js';
 import { leerId, manejarError } from '../shared/utils.js';
@@ -134,7 +133,7 @@ function sanitizeSolicitudInput(
   next();
 }
 
-async function findAll(_req: Request, res: Response) {
+async function findAll(req: Request, res: Response) {
   try {
     const solicitudes = await em.find(
       Solicitud,
@@ -147,7 +146,7 @@ async function findAll(_req: Request, res: Response) {
       data: solicitudes,
     });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 
@@ -173,7 +172,7 @@ async function findOne(req: Request, res: Response) {
       data: solicitud,
     });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 
@@ -215,7 +214,7 @@ async function add(req: Request, res: Response) {
       data: solicitud,
     });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 
@@ -281,7 +280,7 @@ async function update(req: Request, res: Response) {
       data: solicitud,
     });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 
@@ -304,7 +303,11 @@ async function remove(req: Request, res: Response) {
       message: 'Solicitud eliminada',
     });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, {
+      mensajeForeignKey:
+        'No se puede eliminar la solicitud porque tiene una rutina asociada',
+      req,
+    });
   }
 }
 

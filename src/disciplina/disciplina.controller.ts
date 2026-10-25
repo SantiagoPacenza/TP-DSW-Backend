@@ -1,4 +1,3 @@
-
 import type { Request, Response, NextFunction } from 'express';
 import { leerId, manejarError } from '../shared/utils.js';
 import { orm } from '../shared/db/orm.js';
@@ -83,7 +82,7 @@ function sanitizeDisciplinaInput(
 }
 
 // Obtener todas las disciplinas.
-async function findAll(_req: Request, res: Response) {
+async function findAll(req: Request, res: Response) {
   try {
     const disciplinas = await em.find(Disciplina, {});
 
@@ -92,7 +91,7 @@ async function findAll(_req: Request, res: Response) {
       data: disciplinas,
     });
   } catch (error) {
-    return manejarError(res, error);
+    return manejarError(res, error, { req });
   }
 }
 
@@ -115,7 +114,7 @@ async function findOne(req: Request, res: Response) {
       data: disciplina,
     });
   } catch (error) {
-    return manejarError(res, error);
+    return manejarError(res, error, { req });
   }
 }
 
@@ -132,11 +131,10 @@ async function add(req: Request, res: Response) {
       data: disciplina,
     });
   } catch (error) {
-    return manejarError(
-      res,
-      error,
-      'Ya existe una disciplina con ese nombre',
-    );
+    return manejarError(res, error, {
+      mensajeDuplicado: 'Ya existe una disciplina con ese nombre',
+      req,
+    });
   }
 }
 
@@ -164,11 +162,10 @@ async function update(req: Request, res: Response) {
       data: disciplina,
     });
   } catch (error) {
-    return manejarError(
-      res,
-      error,
-      'Ya existe una disciplina con ese nombre',
-    );
+    return manejarError(res, error, {
+      mensajeDuplicado: 'Ya existe una disciplina con ese nombre',
+      req,
+    });
   }
 }
 
@@ -192,7 +189,11 @@ async function remove(req: Request, res: Response) {
       message: 'Disciplina eliminada',
     });
   } catch (error) {
-    return manejarError(res, error);
+    return manejarError(res, error, {
+      mensajeForeignKey:
+        'No se puede eliminar la disciplina porque tiene clases asociadas',
+      req,
+    });
   }
 }
 

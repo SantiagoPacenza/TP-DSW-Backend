@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { orm } from '../shared/db/orm.js';
 import { manejarError, esFechaValida, hoyISO } from '../shared/utils.js';
-import { Membresia } from '../membresia/membresia.entity.js';
+import { Membresia, EstadoMembresia } from '../membresia/membresia.entity.js';
 import { Pago } from './pago.entity.js';
 
 const em = orm.em;
@@ -73,6 +73,13 @@ async function add(req: Request, res: Response) {
     if (!membresia) {
       return res.status(404).json({
         message: 'La membresía asociada no existe',
+      });
+    }
+
+    if (membresia.estadoMembresia === EstadoMembresia.CANCELADA) {
+      return res.status(400).json({
+        message: 'Error de validación',
+        errores: ['No se pueden registrar pagos para una membresía cancelada.'],
       });
     }
 

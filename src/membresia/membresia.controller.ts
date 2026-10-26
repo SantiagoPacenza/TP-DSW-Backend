@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { leerId, manejarError } from '../shared/utils.js';
 import { orm } from '../shared/db/orm.js';
 import { Membresia, EstadoMembresia } from './membresia.entity.js';
-import { Usuario } from '../usuario/usuario.entity.js';
+import { Usuario, RolUsuario } from '../usuario/usuario.entity.js';
 import { Plan } from '../plan/plan.entity.js';
 
 // UNA MEMBRESIA SE GENERA AUTOMÁTICAMENTE CUANDO EL CLIENTE CONTRATA UN PLAN.
@@ -46,7 +46,7 @@ async function add(req: Request, res: Response) {
     }
 
     // 2. ¡VALIDACIÓN DE ROL! Asegurar que solo un cliente pueda tener membresías
-    if (usuarioEntity.rol !== 'cliente') {
+    if (usuarioEntity.rol !== RolUsuario.CLIENTE) {
       return res.status(400).json({ 
         message: 'Error de validación', 
         errores: ['Solo los usuarios con rol de cliente pueden contratar membresías.'] 
@@ -91,7 +91,7 @@ async function update(req: Request, res: Response) {
       if (!usuarioEntity) {
         return res.status(404).json({ message: 'El Usuario asociado no existe' });
       }
-      if (usuarioEntity.rol !== 'cliente') {
+      if (usuarioEntity.rol !== RolUsuario.CLIENTE) {
         return res.status(400).json({ 
           message: 'Error de validación', 
           errores: ['Solo los usuarios con rol de cliente pueden contratar membresías.'] 

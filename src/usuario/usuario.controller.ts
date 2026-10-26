@@ -45,7 +45,8 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
   }
 
   if (body.rol === undefined) {
-    if (req.method !== 'PATCH') errores.push('El rol es obligatorio');
+    // El rol solo es obligatorio al crear el usuario; después es inmutable
+    if (req.method === 'POST') errores.push('El rol es obligatorio');
   } else if (!Object.values(RolUsuario).includes(body.rol)) {
     errores.push(
       `El rol debe ser uno de: ${Object.values(RolUsuario).join(', ')}`,
@@ -176,12 +177,27 @@ async function update(req: Request, res: Response) {
     }
 
     const datos = req.body.sanitizedInput;
+
+    // El rol de un usuario es inmutable una vez creado.
+    // Si viene el mismo que ya tiene, se ignora (así un PUT con el objeto completo no falla).
+    if (datos.rol !== undefined) {
+      if (datos.rol !== usuario.rol) {
+        return res.status(409).json({
+          message: 'El rol de un usuario no se puede modificar',
+        });
+      }
+      delete datos.rol;
+    }
+
     // Solo se hashea si vino una contraseña nueva
     if (datos.contrasenia) {
       datos.contrasenia = await bcrypt.hash(datos.contrasenia, 10);
     }
-    em.assign(usuario, datos);
-    await em.flush(); // 409 si nombreUsuario o email es el mismo que el de otro usuario
+
+    if (Object.keys(datos).length > 0) {
+      em.assign(usuario, datos);
+      await em.flush(); // 409 si nombreUsuario o email es el mismo que el de otro usuario
+    }
     res.status(200).json({ message: 'Usuario actualizado', data: usuario });
   } catch (error) {
     manejarError(res, error, {

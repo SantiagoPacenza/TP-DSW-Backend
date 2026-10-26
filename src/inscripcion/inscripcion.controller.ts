@@ -1,9 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
-import { manejarError } from '../shared/utils.js';
+import { manejarError, hoyISO } from '../shared/utils.js';
 import { orm } from '../shared/db/orm.js';
 import { Inscripcion, EstadoInscripcion } from './inscripcion.entity.js';
 import { Usuario, RolUsuario } from '../usuario/usuario.entity.js';
 import { Clase } from '../clase/clase.entity.js';
+import { Membresia, EstadoMembresia } from '../membresia/membresia.entity.js';
 
 const em = orm.em;
 
@@ -99,10 +100,38 @@ async function add(req: Request, res: Response) {
       });
     }
 
+    // Verificar que el cliente tenga una membresía activa y vigente cuyo plan incluya clases grupales
+    const membresiaHabilitante = await em.findOne(Membresia, {
+      usuario: usuarioEntity,
+      estadoMembresia: EstadoMembresia.ACTIVA,
+      fechaFin: { $gte: hoyISO() },
+      plan: { incluyeClasesGrupales: true },
+    });
+    if (!membresiaHabilitante) {
+      return res.status(400).json({
+        message: 'Error de validación',
+        errores: [
+          'El cliente no tiene una membresía activa y vigente que incluya clases grupales.',
+        ],
+      });
+    }
+
     // Verificar que la Clase relacionada exista
     const claseEntity = await em.findOne(Clase, { id: datosLimpios.claseId });
     if (!claseEntity) {
       return res.status(404).json({ message: 'La Clase asociada no existe' });
+    }
+
+    // Control de cupos: verificar que la clase no haya superado su cupo máximo
+    const inscriptosActuales = await em.count(Inscripcion, {
+      clase: claseEntity,
+      estadoInscripcion: EstadoInscripcion.VALIDA,
+    });
+    if (inscriptosActuales >= claseEntity.cupos) {
+      return res.status(400).json({
+        message: 'Error de validación',
+        errores: ['No hay cupos disponibles para esta clase.'],
+      });
     }
 
     datosLimpios.usuario = usuarioEntity;
@@ -148,7 +177,7 @@ async function update(req: Request, res: Response) {
         return res
           .status(404)
           .json({ message: 'El Usuario asociado no existe' });
-      if (usuarioEntity.rol !== 'cliente') {
+      if (usuarioEntity.rol !== RolUsuario.CLIENTE) {
         return res
           .status(400)
           .json({
@@ -158,17 +187,62 @@ async function update(req: Request, res: Response) {
             ],
           });
       }
+
+      const membresiaHabilitante = await em.findOne(Membresia, {
+        usuario: usuarioEntity,
+        estadoMembresia: EstadoMembresia.ACTIVA,
+        fechaFin: { $gte: hoyISO() },
+        plan: { incluyeClasesGrupales: true },
+      });
+      if (!membresiaHabilitante) {
+        return res.status(400).json({
+          message: 'Error de validación',
+          errores: [
+            'El cliente no tiene una membresía activa y vigente que incluya clases grupales.',
+          ],
+        });
+      }
+
       datosLimpios.usuario = usuarioEntity;
       delete datosLimpios.usuarioId;
     }
 
-    // Si cambian de clase en la actualización
+    // Si cambian de clase o reactivan la inscripción, verificar cupos de la clase
     if (datosLimpios.claseId !== undefined) {
       const claseEntity = await em.findOne(Clase, { id: datosLimpios.claseId });
       if (!claseEntity)
         return res.status(404).json({ message: 'La Clase asociada no existe' });
+
+      const inscriptosActuales = await em.count(Inscripcion, {
+        clase: claseEntity,
+        estadoInscripcion: EstadoInscripcion.VALIDA,
+      });
+      if (inscriptosActuales >= claseEntity.cupos) {
+        return res.status(400).json({
+          message: 'Error de validación',
+          errores: ['No hay cupos disponibles para esta clase.'],
+        });
+      }
+
       datosLimpios.clase = claseEntity;
       delete datosLimpios.claseId;
+    } else if (
+      datosLimpios.estadoInscripcion === EstadoInscripcion.VALIDA &&
+      inscripcion.estadoInscripcion !== EstadoInscripcion.VALIDA
+    ) {
+      const claseEntity = await em.findOne(Clase, { id: claveCompuesta.claseId });
+      if (claseEntity) {
+        const inscriptosActuales = await em.count(Inscripcion, {
+          clase: claseEntity,
+          estadoInscripcion: EstadoInscripcion.VALIDA,
+        });
+        if (inscriptosActuales >= claseEntity.cupos) {
+          return res.status(400).json({
+            message: 'Error de validación',
+            errores: ['No hay cupos disponibles para reactivar la inscripción en esta clase.'],
+          });
+        }
+      }
     }
 
     em.assign(inscripcion, datosLimpios);

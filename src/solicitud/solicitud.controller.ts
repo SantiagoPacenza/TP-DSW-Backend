@@ -183,9 +183,16 @@ async function add(req: Request, res: Response) {
 
     const cliente = await em.findOne(Usuario, { id: clienteId });
 
-    if (!cliente || cliente.rol !== RolUsuario.CLIENTE) {
+    if (!cliente) {
+      return res.status(404).json({
+        message: 'El Usuario asociado no existe',
+      });
+    }
+
+    if (cliente.rol !== RolUsuario.CLIENTE) {
       return res.status(400).json({
-        message: 'El cliente indicado no existe o no tiene rol de cliente',
+        message: 'Error de validación',
+        errores: ['Solo los usuarios con rol de cliente pueden crear solicitudes.'],
       });
     }
 
@@ -239,9 +246,16 @@ async function update(req: Request, res: Response) {
         id: clienteId as number,
       });
 
-      if (!cliente || cliente.rol !== RolUsuario.CLIENTE) {
+      if (!cliente) {
+        return res.status(404).json({
+          message: 'El Usuario asociado no existe',
+        });
+      }
+
+      if (cliente.rol !== RolUsuario.CLIENTE) {
         return res.status(400).json({
-          message: 'El cliente indicado no existe o no tiene rol de cliente',
+          message: 'Error de validación',
+          errores: ['Solo los usuarios con rol de cliente pueden tener solicitudes.'],
         });
       }
 

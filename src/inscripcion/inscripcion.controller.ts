@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { manejarError, hoyISO } from '../shared/utils.js';
+import { manejarError, hoyISO, esFechaValida } from '../shared/utils.js';
 import { orm } from '../shared/db/orm.js';
 import { Inscripcion, EstadoInscripcion } from './inscripcion.entity.js';
 import { Usuario, RolUsuario } from '../usuario/usuario.entity.js';
@@ -21,12 +21,8 @@ function leerIdClaveCompuestaTriple(req: Request, res: Response) {
     return null;
   }
 
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaInscripcion)) {
-    res
-      .status(400)
-      .json({
-        message: 'La fecha de inscripcion debe tener el formato YYYY-MM-DD',
-      });
+  if (!esFechaValida(fechaInscripcion)) {
+    res.status(400).json({ message: 'La fecha de inscripcion debe tener el formato YYYY-MM-DD' });
     return null;
   }
 
@@ -334,16 +330,19 @@ function sanitizeInscripcionInput(
   let fechaInscripcionFinal: string | undefined = undefined;
 
   if (req.method === 'POST') {
-    fechaInscripcionFinal = new Date().toISOString().slice(0, 10);
+    fechaInscripcionFinal = hoyISO();
+
   } else if (body.fechaInscripcion !== undefined) {
-    if (
-      typeof body.fechaInscripcion !== 'string' ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(body.fechaInscripcion)
-    ) {
-      errores.push('La fecha de inscripción debe tener el formato YYYY-MM-DD');
-    } else {
-      fechaInscripcionFinal = body.fechaInscripcion.trim();
-    }
+      if (
+       typeof body.fechaInscripcion !== 'string' ||
+       !esFechaValida(body.fechaInscripcion.trim())
+      ) {
+        errores.push(
+          'La fecha de inscripción debe ser una fecha válida con formato YYYY-MM-DD'
+        );
+      } else {
+        fechaInscripcionFinal = body.fechaInscripcion.trim();
+      }
   }
 
   if (errores.length > 0) {

@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { leerId, manejarError } from '../shared/utils.js';
+import { leerId, manejarError, sumarMeses, esFechaValida, hoyISO } from '../shared/utils.js';
 import { orm } from '../shared/db/orm.js';
 import { Membresia, EstadoMembresia } from './membresia.entity.js';
 import { Usuario, RolUsuario } from '../usuario/usuario.entity.js';
@@ -175,32 +175,28 @@ function sanitizeMembresiaInput(req: Request, res: Response, next: NextFunction)
   }
 
   // 3. Validar 'fechaInicio'
+  
+  // 3. Validar 'fechaInicio'
   if (body.fechaInicio === undefined) {
     if (req.method !== 'PATCH') {
       errores.push('La fecha de inicio es obligatoria');
     }
   } else if (
     typeof body.fechaInicio !== 'string' ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(body.fechaInicio)
+    !esFechaValida(body.fechaInicio.trim())
   ) {
-    errores.push('La fecha de inicio debe tener el formato YYYY-MM-DD');
-  } else {
-    // Forzamos hora local a las 00:00
-    const fecha = new Date(body.fechaInicio + 'T00:00:00');
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-
-    if (
-      isNaN(fecha.getTime()) ||
-      fecha.toISOString().slice(0, 10) !== body.fechaInicio
-    ) {
-      errores.push('La fecha de inicio no es una fecha válida');
-
-    } else if (fecha < hoy) {
-      errores.push('La fecha de inicio de una membresia no puede ser en el pasado');
-    }
+    errores.push(
+      'La fecha de inicio debe ser una fecha válida con formato YYYY-MM-DD'
+    );
+  } else if (body.fechaInicio.trim() < hoyISO()) {
+    errores.push(
+      'La fecha de inicio de una membresía no puede ser en el pasado'
+    );
   }
 
+
+  // 4. Validar 'fechaFin'
+  
   // 4. Validar 'fechaFin'
   if (body.fechaFin === undefined) {
     if (req.method !== 'PATCH') {
@@ -208,24 +204,17 @@ function sanitizeMembresiaInput(req: Request, res: Response, next: NextFunction)
     }
   } else if (
     typeof body.fechaFin !== 'string' ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(body.fechaFin)
+    !esFechaValida(body.fechaFin.trim())
   ) {
-    errores.push('La fecha de fin debe tener el formato YYYY-MM-DD');
-  } else {
-    // Forzamos hora local a las 00:00
-    const fecha = new Date(body.fechaFin + 'T00:00:00');
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-
-    if (
-      isNaN(fecha.getTime()) ||
-      fecha.toISOString().slice(0, 10) !== body.fechaFin
-    ) {
-      errores.push('La fecha de fin no es una fecha válida');
-    } else if (fecha < hoy) {
-      errores.push('La fecha de fin de una membresia no puede ser en el pasado');
-    }
+    errores.push(
+      'La fecha de fin debe ser una fecha válida con formato YYYY-MM-DD'
+    );
+  } else if (body.fechaFin.trim() < hoyISO()) {
+    errores.push(
+      'La fecha de fin de una membresía no puede ser en el pasado'
+    );
   }
+
 
   // 5. Validar 'estadoMembresia'
   if (body.estadoMembresia === undefined) {

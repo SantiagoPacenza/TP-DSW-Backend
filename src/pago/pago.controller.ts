@@ -97,7 +97,7 @@ async function add(req: Request, res: Response) {
       monto: datos.monto as string,
       metodoPago: datos.metodoPago as string,
       fechaLimitePago: datos.fechaLimitePago as string,
-      fechaPago: datos.fechaPago as string | null | undefined,
+      fechaPago: null,
       membresia,
     });
 
@@ -291,6 +291,14 @@ function sanitizePagoInput(req: Request, res: Response, next: NextFunction) {
     errores.push('La fecha límite debe ser válida y tener formato YYYY-MM-DD');
   }
 
+  //validar que el usuario no haya mandado una fecha arbitria en el JSON
+  if (body.fechaPago !== undefined) {
+  errores.push(
+    'La fecha de pago se registra únicamente al confirmar el pago',
+  );
+}
+
+
   if (errores.length > 0) {
     return res.status(400).json({
       message: 'Datos inválidos',
@@ -324,12 +332,6 @@ function sanitizePagoInput(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-export {
-  findAll,
-  findOne,
-  add,
-  update,
-  remove,
-  confirmarPago,
-  sanitizePagoInput,
-};
+export { findAll, findOne, add, update, remove, confirmarPago, sanitizePagoInput };
+
+////SSSSSSSSSSSSSSSSSSSSSSS

@@ -46,7 +46,8 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
   }
 
   if (body.rol === undefined) {
-    if (req.method !== 'PATCH') errores.push('El rol es obligatorio');
+    // El rol solo es obligatorio al crear el usuario; después es inmutable
+    if (req.method === 'POST') errores.push('El rol es obligatorio');
   } else if (!Object.values(RolUsuario).includes(body.rol)) {
     errores.push(
       `El rol debe ser uno de: ${Object.values(RolUsuario).join(', ')}`,
@@ -117,7 +118,7 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
   };
 
   // Agregar contraseña solo si vino en el body (en PUT/PATCH, si se actualizan otros datos no viene y es undefined)
-  if(body.contrasenia !== undefined){
+  if (body.contrasenia !== undefined) {
     datosLimpios.contrasenia = body.contrasenia;
   }
 
@@ -133,12 +134,12 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-async function findAll(_req: Request, res: Response) {
+async function findAll(req: Request, res: Response) {
   try {
     const usuarios = await em.find(Usuario, {});
     res.status(200).json({ message: 'Usuarios encontrados', data: usuarios });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 
@@ -153,7 +154,7 @@ async function findOne(req: Request, res: Response) {
     }
     res.status(200).json({ message: 'Usuario encontrado', data: usuario });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 
@@ -168,7 +169,10 @@ async function add(req: Request, res: Response) {
     await em.flush(); // Acá MySQL rechaza los duplicados (-> 409)
     res.status(201).json({ message: 'Usuario creado', data: usuario });
   } catch (error) {
-    manejarError(res, error, 'El nombre de usuario o el email ya está en uso');
+    manejarError(res, error, {
+      mensajeDuplicado: 'El nombre de usuario o el email ya está en uso',
+      req,
+    });
   }
 }
 
@@ -185,23 +189,32 @@ async function update(req: Request, res: Response) {
 
     const datos = req.body.sanitizedInput;
 
-    if (datos.rol !== undefined && datos.rol !== usuario.rol) {
-    return res.status(409).json({
-    message:
-      'No se puede cambiar el rol de un usuario existente. ' +
-      'Debe crearse un nuevo usuario con el rol correspondiente.',
-      });
+    // El rol de un usuario es inmutable una vez creado.
+    // Si viene el mismo que ya tiene, se ignora (así un PUT con el objeto completo no falla).
+    if (datos.rol !== undefined) {
+      if (datos.rol !== usuario.rol) {
+        return res.status(409).json({
+          message: 'El rol de un usuario no se puede modificar',
+        });
+      }
+      delete datos.rol;
     }
 
     // Solo se hashea si vino una contraseña nueva
     if (datos.contrasenia) {
       datos.contrasenia = await bcrypt.hash(datos.contrasenia, 10);
     }
-    em.assign(usuario, datos);
-    await em.flush(); // 409 si nombreUsuario o email es el mismo que el de otro usuario
+
+    if (Object.keys(datos).length > 0) {
+      em.assign(usuario, datos);
+      await em.flush(); // 409 si nombreUsuario o email es el mismo que el de otro usuario
+    }
     res.status(200).json({ message: 'Usuario actualizado', data: usuario });
   } catch (error) {
-    manejarError(res, error, 'El nombre de usuario o el email ya está en uso');
+    manejarError(res, error, {
+      mensajeDuplicado: 'El nombre de usuario o el email ya está en uso',
+      req,
+    });
   }
 }
 
@@ -292,7 +305,11 @@ async function remove(req: Request, res: Response) {
     await em.remove(usuario).flush();
     res.status(200).json({ message: 'Usuario eliminado' });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, {
+      mensajeForeignKey:
+        'No se puede eliminar el usuario porque tiene membresías, solicitudes, clases o rutinas asociadas',
+      req,
+    });
   }
 }
 

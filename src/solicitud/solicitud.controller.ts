@@ -1,4 +1,3 @@
-
 import type { Request, Response, NextFunction } from 'express';
 import { orm } from '../shared/db/orm.js';
 import { leerId, manejarError } from '../shared/utils.js';
@@ -124,7 +123,7 @@ function sanitizeSolicitudInput(
   next();
 }
 
-async function findAll(_req: Request, res: Response) {
+async function findAll(req: Request, res: Response) {
   try {
     const solicitudes = await em.find(
       Solicitud,
@@ -137,7 +136,7 @@ async function findAll(_req: Request, res: Response) {
       data: solicitudes,
     });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 
@@ -163,7 +162,7 @@ async function findOne(req: Request, res: Response) {
       data: solicitud,
     });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 
@@ -174,9 +173,16 @@ async function add(req: Request, res: Response) {
 
     const cliente = await em.findOne(Usuario, { id: clienteId });
 
-    if (!cliente || cliente.rol !== RolUsuario.CLIENTE) {
+    if (!cliente) {
+      return res.status(404).json({
+        message: 'El Usuario asociado no existe',
+      });
+    }
+
+    if (cliente.rol !== RolUsuario.CLIENTE) {
       return res.status(400).json({
-        message: 'El cliente indicado no existe o no tiene rol de cliente',
+        message: 'Error de validación',
+        errores: ['Solo los usuarios con rol de cliente pueden crear solicitudes.'],
       });
     }
 
@@ -205,7 +211,7 @@ async function add(req: Request, res: Response) {
       data: solicitud,
     });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 
@@ -230,9 +236,16 @@ async function update(req: Request, res: Response) {
         id: clienteId as number,
       });
 
-      if (!cliente || cliente.rol !== RolUsuario.CLIENTE) {
+      if (!cliente) {
+        return res.status(404).json({
+          message: 'El Usuario asociado no existe',
+        });
+      }
+
+      if (cliente.rol !== RolUsuario.CLIENTE) {
         return res.status(400).json({
-          message: 'El cliente indicado no existe o no tiene rol de cliente',
+          message: 'Error de validación',
+          errores: ['Solo los usuarios con rol de cliente pueden tener solicitudes.'],
         });
       }
 
@@ -267,7 +280,7 @@ async function update(req: Request, res: Response) {
       data: solicitud,
     });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 
@@ -290,7 +303,11 @@ async function remove(req: Request, res: Response) {
       message: 'Solicitud eliminada',
     });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, {
+      mensajeForeignKey:
+        'No se puede eliminar la solicitud porque tiene una rutina asociada',
+      req,
+    });
   }
 }
 

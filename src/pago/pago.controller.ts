@@ -1,25 +1,28 @@
-
 import type { Request, Response, NextFunction } from 'express';
 import { orm } from '../shared/db/orm.js';
 import { manejarError, esFechaValida, hoyISO } from '../shared/utils.js';
-import { Membresia } from '../membresia/membresia.entity.js';
+import { Membresia, EstadoMembresia } from '../membresia/membresia.entity.js';
 import { Pago } from './pago.entity.js';
 
 const em = orm.em;
 
 // Listar todos los pagos
-async function findAll(_req: Request, res: Response) {
+async function findAll(req: Request, res: Response) {
   try {
-    const pagos = await em.find(Pago, {}, {
-      populate: ['membresia'],
-    });
+    const pagos = await em.find(
+      Pago,
+      {},
+      {
+        populate: ['membresia'],
+      },
+    );
 
     res.status(200).json({
       message: 'Pagos encontrados',
       data: pagos,
     });
   } catch (error) {
-    manejarError(res, error, 'Error al obtener los pagos.');
+    manejarError(res, error, { req });
   }
 }
 
@@ -30,8 +33,10 @@ async function findOne(req: Request, res: Response) {
     const idPago = Number(req.params.idPago);
 
     if (
-      !Number.isSafeInteger(membresiaId) || membresiaId <= 0 ||
-      !Number.isSafeInteger(idPago) || idPago <= 0
+      !Number.isSafeInteger(membresiaId) ||
+      membresiaId <= 0 ||
+      !Number.isSafeInteger(idPago) ||
+      idPago <= 0
     ) {
       return res.status(400).json({
         message: 'Los identificadores deben ser números enteros positivos',
@@ -53,7 +58,7 @@ async function findOne(req: Request, res: Response) {
       data: pago,
     });
   } catch (error) {
-    manejarError(res, error, 'Error al obtener el pago.');
+    manejarError(res, error, { req });
   }
 }
 
@@ -68,6 +73,13 @@ async function add(req: Request, res: Response) {
     if (!membresia) {
       return res.status(404).json({
         message: 'La membresía asociada no existe',
+      });
+    }
+
+    if (membresia.estadoMembresia === EstadoMembresia.CANCELADA) {
+      return res.status(400).json({
+        message: 'Error de validación',
+        errores: ['No se pueden registrar pagos para una membresía cancelada.'],
       });
     }
 
@@ -96,7 +108,11 @@ async function add(req: Request, res: Response) {
       data: pago,
     });
   } catch (error) {
-    manejarError(res, error, 'Error al crear el pago.');
+    manejarError(res, error, {
+      mensajeDuplicado:
+        'No se pudo registrar el pago porque se registró otro pago para la misma membresía al mismo tiempo.',
+      req,
+    });
   }
 }
 
@@ -107,8 +123,10 @@ async function confirmarPago(req: Request, res: Response) {
     const idPago = Number(req.params.idPago);
 
     if (
-      !Number.isSafeInteger(membresiaId) || membresiaId <= 0 ||
-      !Number.isSafeInteger(idPago) || idPago <= 0
+      !Number.isSafeInteger(membresiaId) ||
+      membresiaId <= 0 ||
+      !Number.isSafeInteger(idPago) ||
+      idPago <= 0
     ) {
       return res.status(400).json({
         message: 'Los identificadores deben ser números enteros positivos',
@@ -139,10 +157,9 @@ async function confirmarPago(req: Request, res: Response) {
       data: pago,
     });
   } catch (error) {
-    manejarError(res, error, 'Error al confirmar el pago.');
+    manejarError(res, error, { req });
   }
 }
-
 
 // Actualizar un pago
 async function update(req: Request, res: Response) {
@@ -151,18 +168,20 @@ async function update(req: Request, res: Response) {
     const idPago = Number(req.params.idPago);
 
     if (
-      !Number.isSafeInteger(membresiaId) || membresiaId <= 0 ||
-      !Number.isSafeInteger(idPago) || idPago <= 0
+      !Number.isSafeInteger(membresiaId) ||
+      membresiaId <= 0 ||
+      !Number.isSafeInteger(idPago) ||
+      idPago <= 0
     ) {
       return res.status(400).json({
         message: 'Los identificadores deben ser números enteros positivos',
       });
     }
 
-    const pago = await em.findOne(
-      Pago,
-      { idPago, membresia: { id: membresiaId } },
-    );
+    const pago = await em.findOne(Pago, {
+      idPago,
+      membresia: { id: membresiaId },
+    });
 
     if (!pago) {
       return res.status(404).json({ message: 'Pago no encontrado' });
@@ -179,7 +198,7 @@ async function update(req: Request, res: Response) {
       data: pago,
     });
   } catch (error) {
-    manejarError(res, error, 'Error al actualizar el pago.');
+    manejarError(res, error, { req });
   }
 }
 
@@ -190,18 +209,20 @@ async function remove(req: Request, res: Response) {
     const idPago = Number(req.params.idPago);
 
     if (
-      !Number.isSafeInteger(membresiaId) || membresiaId <= 0 ||
-      !Number.isSafeInteger(idPago) || idPago <= 0
+      !Number.isSafeInteger(membresiaId) ||
+      membresiaId <= 0 ||
+      !Number.isSafeInteger(idPago) ||
+      idPago <= 0
     ) {
       return res.status(400).json({
         message: 'Los identificadores deben ser números enteros positivos',
       });
     }
 
-    const pago = await em.findOne(
-      Pago,
-      { idPago, membresia: { id: membresiaId } },
-    );
+    const pago = await em.findOne(Pago, {
+      idPago,
+      membresia: { id: membresiaId },
+    });
 
     if (!pago) {
       return res.status(404).json({ message: 'Pago no encontrado' });
@@ -211,26 +232,18 @@ async function remove(req: Request, res: Response) {
 
     res.status(200).json({ message: 'Pago eliminado' });
   } catch (error) {
-    manejarError(res, error, 'Error al eliminar el pago.');
+    manejarError(res, error, { req });
   }
 }
 
 // Validar los datos recibidos
-function sanitizePagoInput(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) {
+function sanitizePagoInput(req: Request, res: Response, next: NextFunction) {
   const body = req.body;
   const errores: string[] = [];
   const esPatch = req.method === 'PATCH';
   const esPost = req.method === 'POST';
 
-  if (
-    typeof body !== 'object' ||
-    body === null ||
-    Array.isArray(body)
-  ) {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
     return res.status(400).json({
       message: 'Datos inválidos',
       errores: ['El cuerpo debe ser un objeto'],
@@ -239,10 +252,7 @@ function sanitizePagoInput(
 
   // Validar membresiaId: solo se recibe al crear un pago.
   if (esPost) {
-    if (
-      !Number.isSafeInteger(body.membresiaId) ||
-      body.membresiaId <= 0
-    ) {
+    if (!Number.isSafeInteger(body.membresiaId) || body.membresiaId <= 0) {
       errores.push('El id de la membresía debe ser un entero positivo');
     }
   } else if (body.membresiaId !== undefined) {
@@ -278,9 +288,7 @@ function sanitizePagoInput(
     typeof body.fechaLimitePago !== 'string' ||
     !esFechaValida(body.fechaLimitePago.trim())
   ) {
-    errores.push(
-      'La fecha límite debe ser válida y tener formato YYYY-MM-DD',
-    );
+    errores.push('La fecha límite debe ser válida y tener formato YYYY-MM-DD');
   }
 
   //validar que el usuario no haya mandado una fecha arbitria en el JSON
@@ -313,7 +321,6 @@ function sanitizePagoInput(
   if (body.fechaLimitePago !== undefined) {
     datosLimpios.fechaLimitePago = body.fechaLimitePago.trim();
   }
-
 
   if (Object.keys(datosLimpios).length === 0) {
     return res.status(400).json({

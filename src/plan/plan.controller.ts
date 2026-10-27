@@ -5,12 +5,12 @@ import { Plan } from './plan.entity.js';
 
 const em = orm.em;
 
-async function findAll(_req: Request, res: Response) {
+async function findAll(req: Request, res: Response) {
   try {
     const planes = await em.find(Plan, {});
     res.status(200).json({ message: 'Planes encontrados', data: planes });
   } catch (error) {
-    manejarError(res, error, 'Error al obtener los planes.');
+    manejarError(res, error, { req });
   }
 }
 
@@ -25,7 +25,7 @@ async function findOne(req: Request, res: Response) {
     }
     res.status(200).json({ message: 'Plan encontrado', data: plan });
   } catch (error) {
-    manejarError(res, error, 'Error al obtener el plan.');
+    manejarError(res, error, { req });
   }
 }
 
@@ -37,7 +37,10 @@ async function add(req: Request, res: Response) {
     await em.flush();
     res.status(201).json({ message: 'Plan creado', data: plan });
   } catch (error) {
-    manejarError(res, error, 'Error al crear nuevo plan.');
+    manejarError(res, error, {
+      mensajeDuplicado: 'Ya existe un plan con ese nombre',
+      req,
+    });
   }
 }
 
@@ -57,7 +60,10 @@ async function update(req: Request, res: Response) {
     res.status(200).json({ message: 'Plan actualizado', data: plan });
   
   } catch (error) {
-    manejarError(res, error, 'Error al actualizar plan.');
+    manejarError(res, error, {
+      mensajeDuplicado: 'Ya existe un plan con ese nombre',
+      req,
+    });
   }
 }
 
@@ -75,7 +81,11 @@ async function remove(req: Request, res: Response) {
     res.status(200).json({ message: 'Plan eliminado' });
 
   } catch (error) {
-    manejarError(res, error, 'Error al eliminar plan.');
+    manejarError(res, error, {
+      mensajeForeignKey:
+        'No se puede eliminar el plan porque tiene membresías asociadas',
+      req,
+    });
   }
 }
 

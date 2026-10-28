@@ -1,11 +1,10 @@
 @url = http://localhost:3000/api
 
-### 1. Registrar un nuevo cliente (Esperado: 201 Created)
+### 1. Registrar un nuevo cliente sin enviar rol (Esperado: 201 Created y rol cliente)
 POST {{url}}/registro
 Content-Type: application/json
 
 {
-  "rol": "cliente",
   "nombre": "Carlos",
   "apellido": "Lopez",
   "fechaNacimiento": "1992-08-15",
@@ -37,7 +36,7 @@ Content-Type: application/json
   "contrasenia": "claveFalsa"
 }
 
-### 4. Login con email inexistente (Esperado: 404 Not Found)
+### 4. Login con email inexistente (Esperado: 401 Unauthorized)
 POST {{url}}/login
 Content-Type: application/json
 
@@ -46,6 +45,7 @@ Content-Type: application/json
   "contrasenia": "passwordSeguro123"
 }
 
-### 5. Probar una ruta protegida enviando el Token en el Header (Esperado: 200 OK si tiene permiso)
+### 5. Intentar listar usuarios con el token de un cliente (Esperado: 403 Forbidden)
+# Esta ruta solo permite administradores o entrenadores.
 GET {{url}}/usuarios
 Authorization: Bearer {{token}}

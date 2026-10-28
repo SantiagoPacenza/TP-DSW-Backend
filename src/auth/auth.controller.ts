@@ -2,33 +2,19 @@ import { Request, Response } from 'express';
 import { manejarError } from '../shared/utils.js';
 import { orm } from '../shared/db/orm.js';
 import { Usuario, RolUsuario } from '../usuario/usuario.entity.js';
+import { SECRET_KEY_JWT } from './auth.middleware.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-// Guardamos la clave secreta en el archivo .env como variable de entorno y la accedemos así:
-const SECRET_KEY_JWT = process.env.SECRET_KEY_JWT || 'clave_por_defecto';
 const em = orm.em;
 
 // ENDPOINT DE REGISTRO (Usa bcrypt para hashear)
 export async function autoregistroCliente(req: Request, res: Response) {
   try {
     const datos = req.body.sanitizedInput;
-    const email = datos.email;
 
-    // Busca en base de datos usando el email único del usuario
-    const validarExistencia = await em.findOne(Usuario, { email });
-    if (validarExistencia !== null) {
-      return res
-        .status(409)
-        .json({
-          message: 'El email ingresado ya está en uso. Ingrese otro email.',
-        });
-    }
-
-    // Se guarda el hash de la contraseña, nunca el texto original
+    /// Hasheamos la contraseña y forzamos el rol cliente
     datos.contrasenia = await bcrypt.hash(datos.contrasenia, 10);
-
-    // Le damos a todos los usuarios que se registren a través del autoregistro el rol de cliente
     datos.rol = RolUsuario.CLIENTE;
 
     const usuario = em.create(Usuario, datos);
@@ -45,26 +31,31 @@ export async function autoregistroCliente(req: Request, res: Response) {
   }
 }
 
-// ENDPOINT DE LOGIN (Usa bcrypt para comparar y JWT para firmar)
+// ENDPOINT DE LOGIN (bcrypt para comparar y JWT para firmar)
 export async function loguearse(req: Request, res: Response) {
   try {
-    const { email, contrasenia } = req.body;
+    const { email, contrasenia } = req.body ?? {};
 
-    if (!email || !contrasenia) {
+    // Validar que email y contrasenia sean strings no vacíos antes de consultar la BD o ejecutar bcrypt
+    if (
+      typeof email !== 'string' ||
+      typeof contrasenia !== 'string' ||
+      !email.trim() ||
+      !contrasenia
+    ) {
       return res
         .status(400)
-        .json({ message: 'Email y contraseña son obligatorios' });
+        .json({ message: 'El email y la contraseña son obligatorios.' });
     }
 
+    const emailNormalizado = email.trim().toLowerCase();
+
     // Busca en base de datos usando el email único del usuario
-    const usuario = await em.findOne(Usuario, { email });
+    const usuario = await em.findOne(Usuario, { email: emailNormalizado });
     if (!usuario) {
       return res
-        .status(404)
-        .json({
-          message:
-            'No existe usuario con el email ingresado. Ingrese un email válido.',
-        });
+        .status(401)
+        .json({ message: 'Email o contraseña incorrectos.' });
     }
 
     // Validación segura de contraseña (compara texto plano ingresado con el hash guardado en db)
@@ -74,18 +65,12 @@ export async function loguearse(req: Request, res: Response) {
     );
 
     if (!contraseniaEsCorrecta) {
-      return res
-        .status(401)
-        .json({
-          message:
-            'Contraseña incorrecta.' /*'Credenciales inválidas' para no revelar info*/,
-        });
+      return res.status(401).json({
+        message: 'Email o contraseña incorrectos.',
+      });
     }
 
     // Si son correctas las credenciales generamos token jwt para el usuario logueado.
-    // El frontend solo recibe un único campo en el JSON de respuesta (por ejemplo: token: "eyJhbGciOiJIUzI1...").
-    // Osea, no recibe un objeto separado con los datos del usuario.
-    // Datos viajan al front como parte del payload o carga útil del JWT > Hay que decodificarlos allí.
     const token = jwt.sign(
       {
         id: usuario.id,
@@ -94,7 +79,7 @@ export async function loguearse(req: Request, res: Response) {
         rol: usuario.rol,
       },
       SECRET_KEY_JWT,
-      { expiresIn: '1h' },
+      { algorithm: 'HS256', expiresIn: '1h' },
     );
 
     // Lo enviamos en la respuesta

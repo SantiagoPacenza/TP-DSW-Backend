@@ -1,4 +1,6 @@
 @url = http://localhost:3000/api
+@emailPrivilegiado = prueba.rol.auth@mail.com
+@contraseniaPrivilegiada = passwordSeguro123
 
 ### 1. Registrar un nuevo cliente sin enviar rol (Esperado: 201 Created y rol cliente)
 POST {{url}}/registro
@@ -49,3 +51,89 @@ Content-Type: application/json
 # Esta ruta solo permite administradores o entrenadores.
 GET {{url}}/usuarios
 Authorization: Bearer {{token}}
+
+### 6. Registrar con email repetido y nombreUsuario distinto (Esperado: 409)
+POST {{url}}/registro
+Content-Type: application/json
+
+{
+  "nombre": "Carlos",
+  "apellido": "Lopez",
+  "fechaNacimiento": "1992-08-15",
+  "nombreUsuario": "carlos_otro",
+  "email": "carlos@mail.com",
+  "contrasenia": "passwordSeguro123"
+}
+
+### 7. Registrar con nombreUsuario repetido y email distinto (Esperado: 409)
+POST {{url}}/registro
+Content-Type: application/json
+
+{
+  "nombre": "Carlos",
+  "apellido": "Lopez",
+  "fechaNacimiento": "1992-08-15",
+  "nombreUsuario": "carloslopez",
+  "email": "carlos.otro@mail.com",
+  "contrasenia": "passwordSeguro123"
+}
+
+### 8. Intentar registrarse como administrador (Esperado: 201 y data.rol = cliente)
+POST {{url}}/registro
+Content-Type: application/json
+
+{
+  "rol": "admin",
+  "nombre": "Prueba",
+  "apellido": "Rol",
+  "fechaNacimiento": "1995-01-01",
+  "nombreUsuario": "prueba_rol_auth",
+  "email": "prueba.rol.auth@mail.com",
+  "contrasenia": "passwordSeguro123"
+}
+
+### 9. Login con email como objeto (Esperado: 400)
+POST {{url}}/login
+Content-Type: application/json
+
+{
+  "email": { "$ne": null },
+  "contrasenia": "passwordSeguro123"
+}
+
+### 10. Login con contraseña numérica (Esperado: 400)
+POST {{url}}/login
+Content-Type: application/json
+
+{
+  "email": "carlos@mail.com",
+  "contrasenia": 12345678
+}
+
+### 11. Acceder a usuarios sin token (Esperado: 401)
+GET {{url}}/usuarios
+
+### 12. Acceder con un token inventado (Esperado: 401)
+GET {{url}}/usuarios
+Authorization: Bearer token_inventado
+
+
+antes de correr el test 13, hacer
+UPDATE usuario SET rol = 'admin' WHERE email = 'prueba.rol.auth@mail.com';
+
+### 13. Login de administrador o entrenador existente (Esperado: 200)
+# @name loginPrivilegiado
+POST {{url}}/login
+Content-Type: application/json
+
+{
+  "email": "{{emailPrivilegiado}}",
+  "contrasenia": "{{contraseniaPrivilegiada}}"
+}
+
+### Guardar el token del administrador o entrenador
+@tokenPrivilegiado = {{loginPrivilegiado.response.body.data}}
+
+### 14. Listar usuarios como administrador o entrenador (Esperado: 200)
+GET {{url}}/usuarios
+Authorization: Bearer {{tokenPrivilegiado}}

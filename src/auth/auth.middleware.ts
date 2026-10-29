@@ -18,55 +18,54 @@ export const verificarToken = (
   req: Request,
   res: Response,
   next: NextFunction,
-) => {
-  // Guarda el encabezado de autorización
+  ) => {
   const authHeader = req.headers['authorization'];
 
-  // Si está vacío es porque el token no está (401 Unauthorized)
-  if (!authHeader) {
-    return res
-      .status(401)
-      .json({ message: 'Token no proporcionado. Acceso denegado.' });
-  }
+    if (!authHeader) {
+     return res
+        .status(401)
+        .json({ message: 'Token no proporcionado. Acceso denegado.' });
+    }
 
-  // Validamos que el encabezado respete el formato "Bearer <token>"
-  const partes = authHeader.split(' ');
-  if (partes.length !== 2 || partes[0] !== 'Bearer' || !partes[1]) {
-    return res
-      .status(401)
-      .json({ message: 'Formato de token inválido. Use: Bearer <token>.' });
-  }
+    const partes = authHeader.split(' ');
 
-  const token = partes[1];
+    if (partes.length !== 2 || partes[0] !== 'Bearer' || !partes[1]) {
+      return res
+        .status(401)
+        .json({ message: 'Formato de token inválido. Use: Bearer <token>.' });
+    }
 
-  // Verificamos que sea un token válido actualmente restringiendo el algoritmo aceptado a HS256
-  jwt.verify(
-    token,
-    SECRET_KEY_JWT,
-    { algorithms: ['HS256'] },
-    (err, decoded) => {
-      if (err) {
-        return res.status(401).json({ message: 'Token inválido o expirado.' });
+    const token = partes[1];
+
+    jwt.verify(
+      token,
+      SECRET_KEY_JWT,
+      { algorithms: ['HS256'] },
+      (err, decoded) => {
+        if (err) {
+          return res
+            .status(401)
+            .json({ message: 'Token inválido o expirado.' });
+        }
+
+        (req as any).usuario = decoded;
+        next();
+      },
+    );
+  };
+
+  export const permitirRoles = (rolesPermitidos: RolUsuario[]) => {
+    return (req: Request, res: Response, next: NextFunction) => {
+      const usuario = (req as any).usuario;
+
+      if (!usuario || !rolesPermitidos.includes(usuario.rol)) {
+        return res.status(403).json({ message: 'Acceso denegado.' });
       }
 
-      // Adjuntamos los datos decodificados al request, para poder acceder a los
-      // datos que llegan en el token desde el front.
-      (req as any).usuario = decoded;
       next();
-    },
-  );
-};
-
-// Fábrica de middlewares para verificar roles leyendo siempre de req.usuario (decodificado del JWT)
-export const permitirRoles = (rolesPermitidos: RolUsuario[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const usuario = (req as any).usuario;
-    if (!usuario || !rolesPermitidos.includes(usuario.rol)) {
-      return res.status(403).json({ message: 'Acceso denegado.' });
-    }
-    next();
+    };
   };
-};
+
 
 export const isAdmin = permitirRoles([RolUsuario.ADMIN]);
 export const isEntrenador = permitirRoles([RolUsuario.ENTRENADOR]);

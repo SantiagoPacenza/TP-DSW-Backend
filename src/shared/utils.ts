@@ -10,23 +10,9 @@ import { OrigenError } from '../errors/error.entity.js';
 // Se valida con regex porque parseInt("12abc") daría 12 sin quejarse.
 export function leerId(req: Request, res: Response): number | null {
   const valor = req.params.id;
+  const id = Number(valor);
 
-  if (!/^\d+$/.test(valor)) {
-    // Expresión regular valida que sea entero
-
-    // Creamos el error para el log
-    const errorIdInvalido = new Error(
-      `El ID proporcionado '${valor} no es un número entero válido.'`,
-    );
-
-    // Registramos en DB y archivo indicando que viene del backend, dado que allí se produce la validación
-    registrarErrorCompleto(
-      errorIdInvalido,
-      'ErrorDeValidación_LeerIdFunction',
-      OrigenError.BACKEND,
-      req,
-    );
-
+  if (!/^\d+$/.test(valor) || !Number.isSafeInteger(id) || id <= 0) {
     res.status(400).json({ message: 'El id debe ser un número entero' });
     return null;
   }
@@ -49,6 +35,14 @@ export function manejarError(
     mensajeForeignKey = 'No se pudo completar la operación debido a un conflicto de relación con otros registros.',
     req,
   } = opciones ?? {};
+
+  // Si la respuesta ya se envió, se registra el error sin intentar responder nuevamente
+  if (res.headersSent) {
+    const tipoError =
+      error instanceof Error ? error.constructor.name : 'UnknownError';
+    registrarErrorCompleto(error, tipoError, OrigenError.BACKEND, req);
+    return;
+  }
 
   // 1. Error por registro duplicado (UNIQUE).
   if (error instanceof UniqueConstraintViolationException) {
@@ -131,4 +125,3 @@ export function sumarMeses(fecha: string, meses: number): string {
 
   return destino.toISOString().slice(0, 10);
 }
-

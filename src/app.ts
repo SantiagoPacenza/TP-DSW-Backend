@@ -1,9 +1,11 @@
 import 'reflect-metadata';
 import 'dotenv/config';
 import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { RequestContext } from '@mikro-orm/core';
 import { orm, syncSchema } from './shared/db/orm.js';
+import { manejarError } from './shared/utils.js';
 import { disciplinaRouter } from './disciplina/disciplina.routes.js';
 import { usuarioRouter } from './usuario/usuario.routes.js';
 import { planRouter } from './plan/plan.routes.js';
@@ -49,7 +51,30 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true });
 });
 
-await syncSchema(); // solo en desarrollo
+// Manejador 404 para rutas inexistentes
+app.use((_req, res) => {
+  res.status(404).json({ message: 'Ruta no encontrada' });
+});
+
+// Middleware global de errores (ej: JSON malformado en el body)
+app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
+  // Manejo de error de JSON malformado
+  if (
+    err instanceof SyntaxError &&
+    'status' in err &&
+    (err as any).status === 400
+  ) {
+    return res
+      .status(400)
+      .json({ message: 'El formato del JSON enviado es inválido' });
+  }
+  // Cualquier otro error inesperado
+  return manejarError(res, err, { req });
+});
+
+if (process.env.NODE_ENV !== 'production') {
+  await syncSchema();
+}
 
 const port = Number(process.env.PORT) || 3000;
 

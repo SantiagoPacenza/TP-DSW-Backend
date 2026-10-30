@@ -286,7 +286,7 @@ async function actualizarDisciplinas(req: Request, res: Response) {
       },
     });
   } catch (error) {
-    manejarError(res, error);
+    manejarError(res, error, { req });
   }
 }
 

@@ -183,7 +183,7 @@ async function remove(req: Request, res: Response) {
       });
     }
 
-    await em.removeAndFlush(disciplina);
+    await em.remove(disciplina).flush();
 
     return res.status(200).json({
       message: 'Disciplina eliminada',
@@ -205,16 +205,3 @@ export {
   update,
   remove,
 };
-
-/* RECORDATORIO PROPIO PARA ENTENDER FUNCIONAMIENTOSSSSS
-  Controller de Disciplina:
-  - sanitizeDisciplinaInput: valida los datos recibidos, elimina espacios innecesarios y prepara los campos permitidos.
-  - findAll: obtiene todas las disciplinas.
-  - findOne: busca una disciplina por su ID.
-  - add: crea una disciplina con los datos validados.
-  - update: modifica una disciplina existente.
-  - remove: elimina una disciplina.
- 
-  Las validaciones se realizan mediante el middleware sanitizeDisciplinaInput.
-  manejarError centraliza el tratamiento de errores.
- */

@@ -8,21 +8,23 @@ import { Membresia, EstadoMembresia } from '../membresia/membresia.entity.js';
 
 const em = orm.em;
 
-// Función auxiliar para leer y validar la clave compuesta cuádruple desde los parámetros de la URL
+// Función auxiliar para leer y validar la clave compuesta triple desde los parámetros de la URL
 function leerIdClaveCompuestaTriple(req: Request, res: Response) {
   const { usuarioId, claseId, fechaInscripcion } = req.params;
 
   if (!/^\d+$/.test(usuarioId) || !/^\d+$/.test(claseId)) {
-    res
-      .status(400)
-      .json({
-        message: 'El id de Usuario y el id de Clase deben ser números enteros',
-      });
+    res.status(400).json({
+      message: 'El id de Usuario y el id de Clase deben ser números enteros',
+    });
     return null;
   }
 
   if (!esFechaValida(fechaInscripcion)) {
-    res.status(400).json({ message: 'La fecha de inscripcion debe tener el formato YYYY-MM-DD' });
+    res
+      .status(400)
+      .json({
+        message: 'La fecha de inscripcion debe tener el formato YYYY-MM-DD',
+      });
     return null;
   }
 
@@ -121,7 +123,7 @@ async function add(req: Request, res: Response) {
     // Control de cupos: verificar que la clase no haya superado su cupo máximo
     const inscriptosActuales = await em.count(Inscripcion, {
       clase: claseEntity,
-      estadoInscripcion: EstadoInscripcion.VALIDA,
+      estadoInscripcion: EstadoInscripcion.ACTIVA,
     });
     if (inscriptosActuales >= claseEntity.cupos) {
       return res.status(400).json({
@@ -174,14 +176,12 @@ async function update(req: Request, res: Response) {
           .status(404)
           .json({ message: 'El Usuario asociado no existe' });
       if (usuarioEntity.rol !== RolUsuario.CLIENTE) {
-        return res
-          .status(400)
-          .json({
-            message: 'Error de validación',
-            errores: [
-              'Solo los usuarios con rol de cliente pueden inscribirse a las clases.',
-            ],
-          });
+        return res.status(400).json({
+          message: 'Error de validación',
+          errores: [
+            'Solo los usuarios con rol de cliente pueden inscribirse a las clases.',
+          ],
+        });
       }
 
       const membresiaHabilitante = await em.findOne(Membresia, {
@@ -211,7 +211,7 @@ async function update(req: Request, res: Response) {
 
       const inscriptosActuales = await em.count(Inscripcion, {
         clase: claseEntity,
-        estadoInscripcion: EstadoInscripcion.VALIDA,
+        estadoInscripcion: EstadoInscripcion.ACTIVA,
       });
       if (inscriptosActuales >= claseEntity.cupos) {
         return res.status(400).json({
@@ -223,19 +223,23 @@ async function update(req: Request, res: Response) {
       datosLimpios.clase = claseEntity;
       delete datosLimpios.claseId;
     } else if (
-      datosLimpios.estadoInscripcion === EstadoInscripcion.VALIDA &&
-      inscripcion.estadoInscripcion !== EstadoInscripcion.VALIDA
+      datosLimpios.estadoInscripcion === EstadoInscripcion.ACTIVA &&
+      inscripcion.estadoInscripcion !== EstadoInscripcion.ACTIVA
     ) {
-      const claseEntity = await em.findOne(Clase, { id: claveCompuesta.claseId });
+      const claseEntity = await em.findOne(Clase, {
+        id: claveCompuesta.claseId,
+      });
       if (claseEntity) {
         const inscriptosActuales = await em.count(Inscripcion, {
           clase: claseEntity,
-          estadoInscripcion: EstadoInscripcion.VALIDA,
+          estadoInscripcion: EstadoInscripcion.ACTIVA,
         });
         if (inscriptosActuales >= claseEntity.cupos) {
           return res.status(400).json({
             message: 'Error de validación',
-            errores: ['No hay cupos disponibles para reactivar la inscripción en esta clase.'],
+            errores: [
+              'No hay cupos disponibles para reactivar la inscripción en esta clase.',
+            ],
           });
         }
       }
@@ -331,18 +335,17 @@ function sanitizeInscripcionInput(
 
   if (req.method === 'POST') {
     fechaInscripcionFinal = hoyISO();
-
   } else if (body.fechaInscripcion !== undefined) {
-      if (
-       typeof body.fechaInscripcion !== 'string' ||
-       !esFechaValida(body.fechaInscripcion.trim())
-      ) {
-        errores.push(
-          'La fecha de inscripción debe ser una fecha válida con formato YYYY-MM-DD'
-        );
-      } else {
-        fechaInscripcionFinal = body.fechaInscripcion.trim();
-      }
+    if (
+      typeof body.fechaInscripcion !== 'string' ||
+      !esFechaValida(body.fechaInscripcion.trim())
+    ) {
+      errores.push(
+        'La fecha de inscripción debe ser una fecha válida con formato YYYY-MM-DD',
+      );
+    } else {
+      fechaInscripcionFinal = body.fechaInscripcion.trim();
+    }
   }
 
   if (errores.length > 0) {
@@ -357,7 +360,7 @@ function sanitizeInscripcionInput(
   if (fechaInscripcionFinal !== undefined)
     datosLimpios.fechaInscripcion = fechaInscripcionFinal;
   if (body.estadoInscripcion !== undefined)
-    datosLimpios.estadoInscripcion = String(body.estadoInscripcion).trim();
+    datosLimpios.estadoInscripcion = body.estadoInscripcion;
 
   if (Object.keys(datosLimpios).length === 0) {
     return res.status(400).json({ message: 'No hay datos para modificar' });

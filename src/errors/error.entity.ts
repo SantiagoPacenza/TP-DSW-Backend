@@ -27,6 +27,6 @@ export class ErrorEntity {
   stackTrace?: string;
 
   @Property({ nullable: true }) // Si viene null es un usuario sin loguear
-  UsuarioId?: number;
+  usuarioId?: number;
 
 }

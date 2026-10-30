@@ -1,8 +1,6 @@
 @url = http://localhost:3000/api
 
-### ==========================================
-### PASO 0: LOGIN AUTOMÁTICO (Hacer clic en "Send Request" aquí una sola vez)
-### ==========================================
+### 0. Login de un usuario existente (Esperado: 200 y token)
 # @name loginRequest
 POST {{url}}/login
 Content-Type: application/json
@@ -15,22 +13,13 @@ Content-Type: application/json
 ### Extraemos automáticamente el token de la respuesta del bloque anterior
 @token = {{loginRequest.response.body.data}}
 
-
-### ==========================================
-### PRUEBAS QUE REQUIEREN AUTENTICACIÓN (Usan el token de arriba solas)
-### ==========================================
-
-### 1. Forzar error de ID inválido en una ruta protegida (Activará manejarError)
-### Observación: lo hemos clasificado como error de Backend por que allí se hace la validación
+### 1. Consultar con ID inválido (Esperado: 400)
+# No debe generar una entrada en errores_log ni en error.log.
 GET {{url}}/usuarios/abc
 Authorization: Bearer {{token}}
 
-
-### ==========================================
-### PRUEBAS PÚBLICAS (No requieren token)
-### ==========================================
-
-### 2. Simular reporte de error desde el Frontend
+### 2. Reportar error sin token (Esperado: 201)
+# Verificar origen frontend y usuarioId NULL en la BD.
 POST {{url}}/errores
 Content-Type: application/json
 
@@ -38,4 +27,117 @@ Content-Type: application/json
   "mensaje": "Error simulado desde el archivo REST Client",
   "stackTrace": "Error at Test.render (App.tsx:10)",
   "tipoError": "ClientRenderError"
+}
+
+### 3. Reportar error con token válido (Esperado: 201)
+# Verificar que usuarioId coincida con el usuario del login.
+POST {{url}}/errores
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "mensaje": "Error de un usuario autenticado",
+  "stackTrace": "Error at Perfil.render (Perfil.tsx:20)",
+  "tipoError": "PerfilError"
+}
+
+### 4. Reportar error con token inválido (Esperado: 201)
+# El token es opcional: se registra sin usuario identificado.
+POST {{url}}/errores
+Authorization: Bearer token_inventado
+Content-Type: application/json
+
+{
+  "mensaje": "Error enviado con un token inválido"
+}
+
+### 5. Reportar sin mensaje (Esperado: 400)
+# No debe guardarse ningún registro.
+POST {{url}}/errores
+Content-Type: application/json
+
+{
+  "tipoError": "PruebaSinMensaje"
+}
+
+### 6. Reportar mensaje de solo espacios (Esperado: 400)
+POST {{url}}/errores
+Content-Type: application/json
+
+{
+  "mensaje": "   "
+}
+
+### 7. Reportar mensaje numérico (Esperado: 400)
+POST {{url}}/errores
+Content-Type: application/json
+
+{
+  "mensaje": 123
+}
+
+### 8. Reportar stackTrace con tipo incorrecto (Esperado: 400)
+POST {{url}}/errores
+Content-Type: application/json
+
+{
+  "mensaje": "Prueba de stack inválido",
+  "stackTrace": { "archivo": "App.tsx" }
+}
+
+### 9. Reportar tipoError numérico (Esperado: 400)
+POST {{url}}/errores
+Content-Type: application/json
+
+{
+  "mensaje": "Prueba de tipoError inválido",
+  "tipoError": 123
+}
+
+### 10. Reportar solo el mensaje (Esperado: 201)
+# Verificar tipoError = FrontendError y stackTrace NULL.
+# No debe guardarse un stack generado por el backend.
+POST {{url}}/errores
+Content-Type: application/json
+
+{
+  "mensaje": "Error sin stack ni tipo"
+}
+
+### 11. Reportar mensaje con saltos de línea (Esperado: 201)
+# En error.log debe ocupar una sola línea JSON.
+# Los saltos dentro del mensaje deben aparecer escapados como \n.
+POST {{url}}/errores
+Content-Type: application/json
+
+{
+  "mensaje": "Primera línea\nSegunda línea\nTercera línea",
+  "tipoError": "PruebaSaltos"
+}
+
+### 12. Consultar una ruta inexistente (Esperado: 404 en JSON)
+GET {{url}}/ruta-inexistente-prueba
+
+### 13. Enviar JSON mal formado (Esperado: 400 en JSON)
+# La coma final es intencional. No corregirla.
+POST {{url}}/errores
+Content-Type: application/json
+
+{
+  "mensaje": "Prueba de JSON inválido",
+}
+
+### 14. Provocar un duplicado en el backend (Esperado: 409)
+# Requiere que Carlos ya exista.
+# Verificar una nueva entrada con origen backend en la BD y el archivo.
+POST {{url}}/registro
+Content-Type: application/json
+
+{
+  "nombre": "Carlos",
+  "apellido": "Lopez",
+  "fechaNacimiento": "1992-08-15",
+  "nombreUsuario": "carloslopez",
+  "email": "carlos@mail.com",
+  "contrasenia": "passwordSeguro123"
 }

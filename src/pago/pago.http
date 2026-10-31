@@ -1,19 +1,43 @@
+@baseUrl = http://localhost:3000/api
 @url = http://localhost:3000/api/pagos
+
+### ==========================================
+### PASO 0: LOGIN AUTOMÁTICO (Hacer clic en "Send Request" aquí una sola vez)
+### ==========================================
+# @name loginRequest
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "prueba.rol.auth@mail.com",
+  "contrasenia": "passwordSeguro123"
+}
+
+### Extraemos automáticamente el token de la respuesta del bloque anterior
+@token = {{loginRequest.response.body.data}}
+
+# Reemplazar por el ID de una membresía existente.
+@membresiaId = 1
+# El ID del pago se toma de la respuesta del caso 3.
+@idPago = {{crearPago.response.body.data.idPago}}
 
 ### 1. Obtener todos los pagos
 GET {{url}}
+Authorization: Bearer {{token}}
 
 ### 2. Obtener un pago por sus claves
-# Reemplazar 1 y 1 por el id de una membresía y el id de su pago
-GET {{url}}/1/1
+# Consulta inicial: reemplazar el último 1 por un pago existente.
+GET {{url}}/{{membresiaId}}/1
+Authorization: Bearer {{token}}
 
 ### 3. Crear un pago para una membresía existente
 # @name crearPago
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "membresiaId": 1,
+  "membresiaId": {{membresiaId}},
   "monto": 25000,
   "metodoPago": "transferencia",
   "fechaLimitePago": "2026-11-10"
@@ -21,10 +45,11 @@ Content-Type: application/json
 
 ### 4. Crear un pago con datos inválidos (esperado: 400)
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "membresiaId": 1,
+  "membresiaId": {{membresiaId}},
   "monto": -100,
   "metodoPago": "",
   "fechaLimitePago": "2026-02-30"
@@ -32,17 +57,19 @@ Content-Type: application/json
 
 ### 5. Crear un pago para una membresía inexistente (esperado: 404)
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
   "membresiaId": 99999,
   "monto": 25000,
   "metodoPago": "efectivo",
-  "fechaLimitePago": "2026-11-10",
+  "fechaLimitePago": "2026-11-10"
 }
 
 ### 6. Actualizar todos los campos con PUT
-PUT {{url}}/1/1
+PUT {{url}}/{{membresiaId}}/{{idPago}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -52,39 +79,40 @@ Content-Type: application/json
 }
 
 ### 7. Actualizar solamente el método con PATCH
-PATCH {{url}}/1/1
+PATCH {{url}}/{{membresiaId}}/{{idPago}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
   "metodoPago": "transferencia"
 }
 
-
-### 9. Intentar actualizar un pago inexistente (esperado: 404)
-PATCH {{url}}/1/99999
+### 8. Intentar actualizar un pago inexistente (esperado: 404)
+PATCH {{url}}/{{membresiaId}}/99999
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
   "metodoPago": "efectivo"
 }
 
-### 10. Eliminar un pago
-DELETE {{url}}/1/1
+### 9. Confirmar que el pago fue abonado (esperado: 200)
+PATCH {{url}}/{{membresiaId}}/{{idPago}}/confirmar
+Authorization: Bearer {{token}}
 
-### 11. Comprobar que el pago eliminado ya no existe (esperado: 404)
-GET {{url}}/1/1
+### 10. Consultar el pago y comprobar la fecha registrada (esperado: 200)
+GET {{url}}/{{membresiaId}}/{{idPago}}
+Authorization: Bearer {{token}}
 
+### 11. Intentar confirmar nuevamente (esperado: 409)
+PATCH {{url}}/{{membresiaId}}/{{idPago}}/confirmar
+Authorization: Bearer {{token}}
 
+### 12. Eliminar el pago (esperado: 200)
+# Este resultado corresponde al comportamiento actual; PG7 sigue pendiente de decisión.
+DELETE {{url}}/{{membresiaId}}/{{idPago}}
+Authorization: Bearer {{token}}
 
-/* por ahora lo ejecutamos manualmente para probarlo. 
-luego lo conectaremos con el front donde habrá un boton de confirmar pagar */
-### Confirmar que el pago fue abonado
-PATCH {{url}}/1/1/confirmar
-
-### Consultar el pago y comprobar la fecha registrada
-GET {{url}}/1/1
-
-### Intentar confirmar nuevamente (esperado: 409)
-PATCH {{url}}/1/1/confirmar
-
-//sssssssssssssssssssssssss
+### 13. Comprobar que el pago eliminado ya no existe (esperado: 404)
+GET {{url}}/{{membresiaId}}/{{idPago}}
+Authorization: Bearer {{token}}

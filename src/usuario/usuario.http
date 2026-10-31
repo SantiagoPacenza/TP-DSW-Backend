@@ -9,7 +9,7 @@ POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
-  "email": "carlos@mail.com",
+  "email": "prueba.rol.auth@mail.com",
   "contrasenia": "passwordSeguro123"
 }
 
@@ -288,11 +288,13 @@ Authorization: Bearer {{token}}
 
 ### 24. Listar para confirmar que quedo vacia (esperado: 200 y data vacio)
 GET {{url}}
+Authorization: Bearer {{token}}
 
 
 ### 25. Crear un entrenador para probar U3 (esperado: 201)
 # @name crearEntrenador
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -311,6 +313,7 @@ Content-Type: application/json
 ### 26. Asignar disciplinas habilitadas (esperado: 200)
 # Requiere que existan las disciplinas con ID 1 y 2.
 PUT {{url}}/{{idEntrenador}}/disciplinas
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -319,6 +322,7 @@ Content-Type: application/json
 
 ### 27. Reemplazar las disciplinas habilitadas (esperado: 200)
 PUT {{url}}/{{idEntrenador}}/disciplinas
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -327,15 +331,35 @@ Content-Type: application/json
 
 ### 28. Intentar asignar una disciplina inexistente (esperado: 400)
 PUT {{url}}/{{idEntrenador}}/disciplinas
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
   "disciplinaIds": [999999]
 }
 
-### 29. Intentar asignar disciplinas a un cliente (esperado: 409)
-# @id debe seguir existiendo y corresponder a un cliente.
-PUT {{url}}/{{id}}/disciplinas
+### 29a. Crear un cliente para probar la restricción de rol (esperado: 201)
+# @name crearClienteDisciplinas
+POST {{url}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "rol": "cliente",
+  "nombre": "Prueba",
+  "apellido": "Disciplinas",
+  "fechaNacimiento": "1995-04-12",
+  "nombreUsuario": "cliente_disciplinas",
+  "email": "cliente.disciplinas@mail.com",
+  "contrasenia": "clave123"
+}
+
+### Guardar el ID del cliente que sigue existiendo
+@idClienteDisciplinas = {{crearClienteDisciplinas.response.body.data.id}}
+
+### 29b. Intentar asignar disciplinas a un cliente (esperado: 409)
+PUT {{url}}/{{idClienteDisciplinas}}/disciplinas
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -344,6 +368,7 @@ Content-Type: application/json
 
 ### 30. Intentar asignar disciplinas a un usuario inexistente (esperado: 404)
 PUT {{url}}/99999/disciplinas
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -352,6 +377,7 @@ Content-Type: application/json
 
 ### 31. Enviar IDs duplicados (esperado: 400)
 PUT {{url}}/{{idEntrenador}}/disciplinas
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -360,8 +386,13 @@ Content-Type: application/json
 
 ### 32. Quitar todas las disciplinas habilitadas (esperado: 200)
 PUT {{url}}/{{idEntrenador}}/disciplinas
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
   "disciplinaIds": []
 }
+
+### 33. Eliminar el cliente creado en 29a (esperado: 200)
+DELETE {{url}}/{{idClienteDisciplinas}}
+Authorization: Bearer {{token}}

@@ -1,0 +1,133 @@
+# Ejecutar en orden. Completar credenciales e IDs con datos de prueba existentes.
+# clienteId debe corresponder al cliente del login.
+# Las solicitudes y membresias "Propia" son de ese cliente; las "Ajena", de otro.
+# La clase y la rutina ajenas deben pertenecer a OTRO entrenador.
+# Se necesitan dos clientes y dos entrenadores. Este archivo no crea datos de preparacion.
+
+@url = http://localhost:3000/api
+@emailAdmin = prueba.rol.auth@mail.com
+@claveAdmin = passwordSeguro123
+@emailCliente = carlos@mail.com
+@claveCliente = passwordSeguro123
+@emailEntrenador = carlos.entrenador@mail.com
+@claveEntrenador = clave123
+@clienteId = 1
+@otroClienteId = 3
+@solicitudPropiaId = 1
+@solicitudAjenaId = 2
+@membresiaPropiaId = 1
+@membresiaAjenaId = 2
+@claseAjenaId = 2
+@rutinaAjenaId = 2
+@admin = {{loginAdmin.response.body.data}}
+@cliente = {{loginCliente.response.body.data}}
+@entrenador = {{loginEntrenador.response.body.data}}
+
+### 0. Login admin (200)
+# @name loginAdmin
+POST {{url}}/login
+Content-Type: application/json
+
+{ "email": "{{emailAdmin}}", "contrasenia": "{{claveAdmin}}" }
+
+### 1. Login cliente (200)
+# @name loginCliente
+POST {{url}}/login
+Content-Type: application/json
+
+{ "email": "{{emailCliente}}", "contrasenia": "{{claveCliente}}" }
+
+### 2. Login entrenador (200)
+# @name loginEntrenador
+POST {{url}}/login
+Content-Type: application/json
+
+{ "email": "{{emailEntrenador}}", "contrasenia": "{{claveEntrenador}}" }
+
+### 3. Ruta protegida sin token (401)
+GET {{url}}/membresias
+
+### 4. Cliente intenta crear un admin (403)
+# El permiso debe rechazarse antes de validar los campos faltantes.
+POST {{url}}/usuarios
+Authorization: Bearer {{cliente}}
+Content-Type: application/json
+
+{ "rol": "admin" }
+
+### 5. Cliente consulta su cuenta (200)
+GET {{url}}/usuarios/{{clienteId}}
+Authorization: Bearer {{cliente}}
+
+### 6. Cliente consulta una cuenta ajena (403)
+GET {{url}}/usuarios/{{otroClienteId}}
+Authorization: Bearer {{cliente}}
+
+### 7. Cliente modifica una cuenta ajena (403)
+PATCH {{url}}/usuarios/{{otroClienteId}}
+Authorization: Bearer {{cliente}}
+Content-Type: application/json
+
+{ "telefono": "3415559999" }
+
+### 8. Cliente elimina una cuenta ajena (403)
+DELETE {{url}}/usuarios/{{otroClienteId}}
+Authorization: Bearer {{cliente}}
+
+### 9. Cliente crea una solicitud para otro (403)
+POST {{url}}/solicitudes
+Authorization: Bearer {{cliente}}
+Content-Type: application/json
+
+{ "clienteId": {{otroClienteId}}, "peso": 75, "masaMuscular": 32, "altura": 180, "objetivo": "Mejorar fuerza" }
+
+### 10. Cliente consulta una solicitud ajena (403)
+GET {{url}}/solicitudes/{{solicitudAjenaId}}
+Authorization: Bearer {{cliente}}
+
+### 11. Cliente elimina una solicitud ajena (403)
+DELETE {{url}}/solicitudes/{{solicitudAjenaId}}
+Authorization: Bearer {{cliente}}
+
+### 12. Cliente consulta su solicitud (200)
+GET {{url}}/solicitudes/{{solicitudPropiaId}}
+Authorization: Bearer {{cliente}}
+
+### 13. Cliente intenta PUT de su membresia (403)
+# Se rechaza por rol antes de validar el cuerpo.
+PUT {{url}}/membresias/{{membresiaPropiaId}}
+Authorization: Bearer {{cliente}}
+Content-Type: application/json
+
+{}
+
+### 14. Cliente intenta extender su membresia (403)
+PATCH {{url}}/membresias/{{membresiaPropiaId}}
+Authorization: Bearer {{cliente}}
+Content-Type: application/json
+
+{ "fechaFin": "2030-12-31" }
+
+### 15. Cliente consulta una membresia ajena (403)
+GET {{url}}/membresias/{{membresiaAjenaId}}
+Authorization: Bearer {{cliente}}
+
+### 16. Entrenador modifica una clase ajena (403)
+PATCH {{url}}/clases/{{claseAjenaId}}
+Authorization: Bearer {{entrenador}}
+Content-Type: application/json
+
+{ "cupos": 20 }
+
+### 17. Entrenador modifica una rutina ajena (403)
+PATCH {{url}}/rutinas/{{rutinaAjenaId}}
+Authorization: Bearer {{entrenador}}
+Content-Type: application/json
+
+{ "descripcion": "Cambio no permitido" }
+
+### 18. Admin lista usuarios (200)
+GET {{url}}/usuarios
+Authorization: Bearer {{admin}}
+
+

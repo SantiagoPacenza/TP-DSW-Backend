@@ -1,4 +1,20 @@
+@baseUrl = http://localhost:3000/api
 @url = http://localhost:3000/api/planes
+
+### ==========================================
+### PASO 0: LOGIN AUTOMÁTICO (Hacer clic en "Send Request" aquí una sola vez)
+### ==========================================
+# @name loginRequest
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "prueba.rol.auth@mail.com",
+  "contrasenia": "passwordSeguro123"
+}
+
+### Extraemos automáticamente el token de la respuesta del bloque anterior
+@token = {{loginRequest.response.body.data}}
 
 ### 1. Listar (esperado: 200)
 GET {{url}}
@@ -6,6 +22,7 @@ GET {{url}}
 ### 2. Crear un plan (esperado: 201)
 # @name crear
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -25,6 +42,7 @@ GET {{url}}/{{id}}
 ### 4. Crear sin nombre (esperado: 400)
 # errores: ["El nombre es obligatorio"]
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -37,6 +55,7 @@ Content-Type: application/json
 ### 5. Crear con precio inválido (esperado: 400)
 # errores: ["El precio debe ser un número válido"]
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -50,6 +69,7 @@ Content-Type: application/json
 ### 6. Crear con duración inválida que no es entera (esperado: 400)
 # errores: ["La duración en meses debe ser un número entero válido"]
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -66,6 +86,7 @@ Content-Type: application/json
 #   - "El precio es obligatorio"
 #   - "El campo 'Incluye clases grupales' debe ser un booleano (true o false)"
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -78,6 +99,7 @@ Content-Type: application/json
 ### 8. Nombre demasiado largo (esperado: 400)
 # errores: ["El nombre no puede tener más de 80 caracteres"]
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -91,6 +113,7 @@ Content-Type: application/json
 ### 9. Campos de más: se ignoran (esperado: 201)
 # @name crearExtra
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -116,6 +139,7 @@ GET {{url}}/99999
 
 ### 12. PUT completo (esperado: 200)
 PUT {{url}}/{{id}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -128,6 +152,7 @@ Content-Type: application/json
 
 ### 13. PATCH de una sola parte (esperado: 200)
 PATCH {{url}}/{{id}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "precio": 19600.00 }
@@ -135,6 +160,7 @@ Content-Type: application/json
 ### 14. PATCH sin datos (esperado: 400)
 # "No hay datos para modificar"
 PATCH {{url}}/{{id}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {}
@@ -142,6 +168,7 @@ Content-Type: application/json
 ### 15. Eliminar el primero (esperado: 200)
 # "Plan eliminado"
 DELETE {{url}}/{{id}}
+Authorization: Bearer {{token}}
 
 ### 16. Ver el eliminado (esperado: 404)
 # "Plan no encontrado"
@@ -149,7 +176,7 @@ GET {{url}}/{{id}}
 
 ### 17. Eliminar el segundo (esperado: 200)
 DELETE {{url}}/{{idExtra}}
+Authorization: Bearer {{token}}
 
 ### 18. Listar para confirmar que quedó vacío (esperado: 200 y data vacío)
 GET {{url}}
-

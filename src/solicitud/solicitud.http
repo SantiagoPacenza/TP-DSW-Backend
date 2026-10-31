@@ -1,16 +1,34 @@
-
+@baseUrl = http://localhost:3000/api
 @url = http://localhost:3000/api/solicitudes
 
-# IMPORTANTE: reemplazá 1 por el ID de un usuario existente
-# cuyo rol sea "cliente".
+### ==========================================
+### PASO 0: LOGIN AUTOMÁTICO (Hacer clic en "Send Request" aquí una sola vez)
+### ==========================================
+# @name loginRequest
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "prueba.rol.auth@mail.com",
+  "contrasenia": "passwordSeguro123"
+}
+
+### Extraemos automáticamente el token de la respuesta del bloque anterior
+@token = {{loginRequest.response.body.data}}
+
+# IMPORTANTE: reemplazá 1 por el ID de un usuario existente cuyo rol sea "cliente",
+# y 2 por el ID de un usuario existente cuyo rol NO sea "cliente" (ej: admin o entrenador).
 @clienteId = 1
+@noClienteId = 2
 
 ### 1. Listar solicitudes (esperado: 200)
 GET {{url}}
+Authorization: Bearer {{token}}
 
 ### 2. Crear una solicitud (esperado: 201)
 # @name crear
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -27,9 +45,11 @@ Content-Type: application/json
 
 ### 3. Consultar la solicitud creada (esperado: 200)
 GET {{url}}/{{id}}
+Authorization: Bearer {{token}}
 
 ### 4. Crear sin objetivo (esperado: 400)
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -41,6 +61,7 @@ Content-Type: application/json
 
 ### 5. Crear con peso inválido (esperado: 400)
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -51,8 +72,9 @@ Content-Type: application/json
   "objetivo": "Aumentar masa muscular"
 }
 
-### 6. Crear con cliente inexistente (esperado: 400)
+### 6. Crear con cliente inexistente (esperado: 404)
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -63,14 +85,30 @@ Content-Type: application/json
   "objetivo": "Aumentar masa muscular"
 }
 
-### 7. ID que no es un número (esperado: 400)
+### 7. Crear con usuario existente cuyo rol NO es cliente (esperado: 400)
+POST {{url}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteId": {{noClienteId}},
+  "peso": 75,
+  "masaMuscular": 32,
+  "altura": 1.80,
+  "objetivo": "Aumentar masa muscular"
+}
+
+### 8. ID que no es un número (esperado: 400)
 GET {{url}}/abc
+Authorization: Bearer {{token}}
 
-### 8. ID inexistente (esperado: 404)
+### 9. ID inexistente (esperado: 404)
 GET {{url}}/99999
+Authorization: Bearer {{token}}
 
-### 9. Actualizar solicitud completa (esperado: 200)
+### 10. Actualizar solicitud completa (esperado: 200)
 PUT {{url}}/{{id}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -82,41 +120,30 @@ Content-Type: application/json
   "lesionesPrevias": "Ninguna"
 }
 
-### 10. Actualizar solo el objetivo (esperado: 200)
+### 11. Actualizar solo el objetivo (esperado: 200)
 PATCH {{url}}/{{id}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
   "objetivo": "Mejorar fuerza y resistencia"
 }
 
-### 11. Cambiar el estado (esperado: 200)
+### 12. PATCH sin datos (esperado: 400)
 PATCH {{url}}/{{id}}
-Content-Type: application/json
-
-{
-  "estado": "aprobada"
-}
-
-### 12. Enviar un estado inválido (esperado: 400)
-PATCH {{url}}/{{id}}
-Content-Type: application/json
-
-{
-  "estado": "cualquier_estado"
-}
-
-### 13. PATCH sin datos (esperado: 400)
-PATCH {{url}}/{{id}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {}
 
-### 14. Eliminar solicitud (esperado: 200)
+### 13. Eliminar solicitud (esperado: 200)
 DELETE {{url}}/{{id}}
+Authorization: Bearer {{token}}
 
-### 15. Consultar la solicitud eliminada (esperado: 404)
+### 14. Consultar la solicitud eliminada (esperado: 404)
 GET {{url}}/{{id}}
+Authorization: Bearer {{token}}
 
-### 16. Listar solicitudes al finalizar (esperado: 200)
+### 15. Listar solicitudes al finalizar (esperado: 200)
 GET {{url}}
+Authorization: Bearer {{token}}

@@ -148,6 +148,16 @@ async function findOne(req: Request, res: Response) {
     const id = leerId(req, res);
     if (id === null) return;
 
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol !== RolUsuario.ADMIN &&
+      usuarioAutenticado.id !== id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para acceder a los datos de otro usuario.',
+      });
+    }
+
     const usuario = await em.findOne(Usuario, { id });
     if (!usuario) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
@@ -181,6 +191,16 @@ async function update(req: Request, res: Response) {
   try {
     const id = leerId(req, res);
     if (id === null) return;
+
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol !== RolUsuario.ADMIN &&
+      usuarioAutenticado.id !== id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para modificar los datos de otro usuario.',
+      });
+    }
 
     const usuario = await em.findOne(Usuario, { id });
     if (!usuario) {
@@ -296,6 +316,16 @@ async function remove(req: Request, res: Response) {
   try {
     const id = leerId(req, res);
     if (id === null) return;
+
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol !== RolUsuario.ADMIN &&
+      usuarioAutenticado.id !== id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para eliminar la cuenta de otro usuario.',
+      });
+    }
 
     const usuario = await em.findOne(Usuario, { id });
     if (!usuario) {

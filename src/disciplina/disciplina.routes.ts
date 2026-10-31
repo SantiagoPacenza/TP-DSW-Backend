@@ -7,12 +7,13 @@ import {
   update,
   remove,
 } from './disciplina.controller.js';
+import { verificarToken, isAdmin } from '../auth/auth.middleware.js';
 
 export const disciplinaRouter = Router();
 
 disciplinaRouter.get('/', findAll);
 disciplinaRouter.get('/:id', findOne);
-disciplinaRouter.post('/', sanitizeDisciplinaInput, add);
-disciplinaRouter.put('/:id', sanitizeDisciplinaInput, update);
-disciplinaRouter.patch('/:id', sanitizeDisciplinaInput, update);
-disciplinaRouter.delete('/:id', remove);
+disciplinaRouter.post('/', verificarToken, isAdmin, sanitizeDisciplinaInput, add);
+disciplinaRouter.put('/:id', verificarToken, isAdmin, sanitizeDisciplinaInput, update);
+disciplinaRouter.patch('/:id', verificarToken, isAdmin, sanitizeDisciplinaInput, update);
+disciplinaRouter.delete('/:id', verificarToken, isAdmin, remove);

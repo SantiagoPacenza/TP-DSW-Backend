@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { orm } from '../shared/db/orm.js';
 import { manejarError, esFechaValida, hoyISO } from '../shared/utils.js';
 import { Membresia, EstadoMembresia } from '../membresia/membresia.entity.js';
+import { RolUsuario } from '../usuario/usuario.entity.js';
 import { Pago } from './pago.entity.js';
 
 const em = orm.em;
@@ -9,9 +10,15 @@ const em = orm.em;
 // Listar todos los pagos
 async function findAll(req: Request, res: Response) {
   try {
+    const usuarioAutenticado = (req as any).usuario;
+    const filtro =
+      usuarioAutenticado.rol === RolUsuario.CLIENTE
+        ? { membresia: { cliente: usuarioAutenticado.id } }
+        : {};
+
     const pagos = await em.find(
       Pago,
-      {},
+      filtro,
       {
         populate: ['membresia'],
       },
@@ -53,6 +60,16 @@ async function findOne(req: Request, res: Response) {
       return res.status(404).json({ message: 'Pago no encontrado' });
     }
 
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.CLIENTE &&
+      pago.membresia.cliente.id !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para consultar pagos de otro cliente.',
+      });
+    }
+
     res.status(200).json({
       message: 'Pago encontrado',
       data: pago,
@@ -73,6 +90,16 @@ async function add(req: Request, res: Response) {
     if (!membresia) {
       return res.status(404).json({
         message: 'La membresía asociada no existe',
+      });
+    }
+
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.CLIENTE &&
+      membresia.cliente.id !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para registrar pagos en una membresía de otro cliente.',
       });
     }
 
@@ -133,13 +160,27 @@ async function confirmarPago(req: Request, res: Response) {
       });
     }
 
-    const pago = await orm.em.findOne(Pago, {
-      idPago,
-      membresia: { id: membresiaId },
-    });
+    const pago = await orm.em.findOne(
+      Pago,
+      {
+        idPago,
+        membresia: { id: membresiaId },
+      },
+      { populate: ['membresia'] },
+    );
 
     if (!pago) {
       return res.status(404).json({ message: 'Pago no encontrado' });
+    }
+
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.CLIENTE &&
+      pago.membresia.cliente.id !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para confirmar pagos de otro cliente.',
+      });
     }
 
     if (pago.fechaPago) {
@@ -333,5 +374,3 @@ function sanitizePagoInput(req: Request, res: Response, next: NextFunction) {
 }
 
 export { findAll, findOne, add, update, remove, confirmarPago, sanitizePagoInput };
-
-////SSSSSSSSSSSSSSSSSSSSSSS

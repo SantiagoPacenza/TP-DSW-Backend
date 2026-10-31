@@ -35,16 +35,26 @@ async function add(req: Request, res: Response) {
   try {
     const datosLimpios = req.body.sanitizedInput;
 
-    // Verificar que el Usuario relacionado exista
-    const usuarioEntity = await em.findOne(Usuario, {
-      id: datosLimpios.usuarioId,
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.ENTRENADOR &&
+      datosLimpios.entrenadorId !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para crear una clase a nombre de otro entrenador.',
+      });
+    }
+
+    // Verificar que el Entrenador relacionado exista
+    const entrenadorEntity = await em.findOne(Usuario, {
+      id: datosLimpios.entrenadorId,
     });
-    if (!usuarioEntity) {
-      return res.status(404).json({ message: 'El Usuario asociado no existe' });
+    if (!entrenadorEntity) {
+      return res.status(404).json({ message: 'El Entrenador asociado no existe' });
     }
 
     // ¡VALIDACIÓN DE ROL! Aseguramos que solo un usuario con rol 'entrenador' pueda asociarse con una clase
-    if (usuarioEntity.rol !== RolUsuario.ENTRENADOR) {
+    if (entrenadorEntity.rol !== RolUsuario.ENTRENADOR) {
       return res.status(400).json({
         message: 'Error de validación',
         errores: [
@@ -64,8 +74,8 @@ async function add(req: Request, res: Response) {
     }
 
     // Verificar que el entrenador esté habilitado para dictar esa disciplina
-    await usuarioEntity.disciplinas.init();
-    if (!usuarioEntity.disciplinas.contains(disciplinaEntity)) {
+    await entrenadorEntity.disciplinas.init();
+    if (!entrenadorEntity.disciplinas.contains(disciplinaEntity)) {
       return res.status(400).json({
         message: 'Error de validación',
         errores: [
@@ -75,9 +85,9 @@ async function add(req: Request, res: Response) {
     }
 
     datosLimpios.disciplina = disciplinaEntity;
-    datosLimpios.usuario = usuarioEntity;
+    datosLimpios.entrenador = entrenadorEntity;
     delete datosLimpios.disciplinaId;
-    delete datosLimpios.usuarioId;
+    delete datosLimpios.entrenadorId;
 
     const clase = em.create(Clase, datosLimpios);
     await em.flush();
@@ -95,31 +105,48 @@ async function update(req: Request, res: Response) {
     const clase = await em.findOne(
       Clase,
       { id },
-      { populate: ['usuario', 'disciplina'] },
+      { populate: ['entrenador', 'disciplina'] },
     );
     if (!clase) {
-      return res.status(404).json({ message: 'Clase no encontrada.' });
+      return res.status(404).json({ message: 'Clase no encontrada' });
     }
 
     const datosLimpios = req.body.sanitizedInput;
 
+    const usuarioAutenticado = (req as any).usuario;
+    if (usuarioAutenticado.rol === RolUsuario.ENTRENADOR) {
+      if (clase.entrenador.id !== usuarioAutenticado.id) {
+        return res.status(403).json({
+          message: 'No tenés permiso para modificar una clase de otro entrenador.',
+        });
+      }
+      if (
+        datosLimpios.entrenadorId !== undefined &&
+        datosLimpios.entrenadorId !== usuarioAutenticado.id
+      ) {
+        return res.status(403).json({
+          message: 'No tenés permiso para reasignar la clase a otro entrenador.',
+        });
+      }
+    }
+
     // En PATCH puede cambiar solo uno; tomamos los valores actuales por defecto para validar la combinación final
-    let entrenadorFinal = clase.usuario;
+    let entrenadorFinal = clase.entrenador;
     let disciplinaFinal = clase.disciplina;
 
-    // Si mandan usuarioId en el update, verificar que exista y tenga rol de entrenador
-    if (datosLimpios.usuarioId !== undefined) {
-      const usuarioEntity = await em.findOne(Usuario, {
-        id: datosLimpios.usuarioId,
+    // Si mandan entrenadorId en el update, verificar que exista y tenga rol de entrenador
+    if (datosLimpios.entrenadorId !== undefined) {
+      const entrenadorEntity = await em.findOne(Usuario, {
+        id: datosLimpios.entrenadorId,
       });
 
-      if (!usuarioEntity) {
+      if (!entrenadorEntity) {
         return res
           .status(404)
-          .json({ message: 'El Usuario asociado no existe' });
+          .json({ message: 'El Entrenador asociado no existe' });
       }
 
-      if (usuarioEntity.rol !== RolUsuario.ENTRENADOR) {
+      if (entrenadorEntity.rol !== RolUsuario.ENTRENADOR) {
         return res.status(400).json({
           message: 'Error de validación',
           errores: [
@@ -129,10 +156,10 @@ async function update(req: Request, res: Response) {
       }
 
       // Si vino un entrenador nuevo en el body, lo actualizamos:
-      entrenadorFinal = usuarioEntity;
-      datosLimpios.usuario = usuarioEntity;
+      entrenadorFinal = entrenadorEntity;
+      datosLimpios.entrenador = entrenadorEntity;
 
-      delete datosLimpios.usuarioId;
+      delete datosLimpios.entrenadorId;
     }
 
     // Si mandan disciplinaId en el update, verificar que exista
@@ -156,7 +183,7 @@ async function update(req: Request, res: Response) {
 
     // Si cambió el entrenador o la disciplina, verificar que el entrenador esté habilitado
     if (
-      datosLimpios.usuario !== undefined ||
+      datosLimpios.entrenador !== undefined ||
       datosLimpios.disciplina !== undefined
     ) {
       await entrenadorFinal.disciplinas.init();
@@ -186,6 +213,16 @@ async function remove(req: Request, res: Response) {
     const clase = await em.findOne(Clase, { id });
     if (!clase) {
       return res.status(404).json({ message: 'Clase no encontrada' });
+    }
+
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.ENTRENADOR &&
+      clase.entrenador.id !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para eliminar una clase de otro entrenador.',
+      });
     }
 
     await em.remove(clase).flush();
@@ -252,13 +289,13 @@ function sanitizeClaseInput(req: Request, res: Response, next: NextFunction) {
     errores.push('La hora de fin debe tener el formato HH:mm');
   }
 
-  // Validar 'usuarioId' (debe venir el ID o la referencia)
-  if (body.usuarioId === undefined) {
+  // Validar 'entrenadorId' (debe venir el ID o la referencia)
+  if (body.entrenadorId === undefined) {
     if (req.method !== 'PATCH') errores.push('El entrenador es obligatorio');
   } else if (
-    typeof body.usuarioId !== 'number' ||
-    !Number.isInteger(body.usuarioId) ||
-    body.usuarioId <= 0
+    typeof body.entrenadorId !== 'number' ||
+    !Number.isInteger(body.entrenadorId) ||
+    body.entrenadorId <= 0
   ) {
     errores.push('El id del entrenador debe ser un número entero válido');
   }
@@ -284,7 +321,7 @@ function sanitizeClaseInput(req: Request, res: Response, next: NextFunction) {
     diaSemana: body.diaSemana,
     horaInicio: body.horaInicio?.trim(),
     horaFin: body.horaFin?.trim(),
-    usuarioId: body.usuarioId,
+    entrenadorId: body.entrenadorId,
     disciplinaId: body.disciplinaId,
   };
 

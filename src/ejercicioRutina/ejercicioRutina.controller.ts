@@ -4,6 +4,7 @@ import { orm } from '../shared/db/orm.js';
 import { DiaRutina, EjercicioRutina } from './ejercicioRutina.entity.js';
 import { Rutina } from '../rutina/rutina.entity.js';
 import { Ejercicio } from '../ejercicio/ejercicio.entity.js';
+import { RolUsuario } from '../usuario/usuario.entity.js';
 
 const em = orm.em;
 
@@ -196,6 +197,16 @@ async function add(req: Request, res: Response) {
       });
     }
 
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.ENTRENADOR &&
+      rutina.entrenador.id !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para agregar ejercicios a una rutina de otro entrenador.',
+      });
+    }
+
     const ejercicio = await em.findOne(Ejercicio, { id: ejercicioId });
     if (!ejercicio) {
       return res.status(404).json({
@@ -230,10 +241,24 @@ async function update(req: Request, res: Response) {
     const id = leerId(req, res);
     if (id === null) return;
 
-    const renglon = await em.findOne(EjercicioRutina, { id });
+    const renglon = await em.findOne(
+      EjercicioRutina,
+      { id },
+      { populate: ['rutina'] },
+    );
     if (!renglon) {
       return res.status(404).json({
         message: 'Ejercicio de rutina no encontrado',
+      });
+    }
+
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.ENTRENADOR &&
+      renglon.rutina.entrenador.id !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para modificar ejercicios de una rutina de otro entrenador.',
       });
     }
 
@@ -289,10 +314,24 @@ async function remove(req: Request, res: Response) {
     const id = leerId(req, res);
     if (id === null) return;
 
-    const renglon = await em.findOne(EjercicioRutina, { id });
+    const renglon = await em.findOne(
+      EjercicioRutina,
+      { id },
+      { populate: ['rutina'] },
+    );
     if (!renglon) {
       return res.status(404).json({
         message: 'Ejercicio de rutina no encontrado',
+      });
+    }
+
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.ENTRENADOR &&
+      renglon.rutina.entrenador.id !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para quitar ejercicios de una rutina de otro entrenador.',
       });
     }
 

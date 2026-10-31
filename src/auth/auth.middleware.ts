@@ -54,14 +54,49 @@ export const verificarToken = (
     );
   };
 
+
+
+// Middleware opcional: el error queda asociado al usuario cuando hay un token válido. Si no lo hay, se registra 
+// sin usuario identificado, esto para reportar errores antes de iniciar sesion o cuando el token ya vencio.
+export const verificarTokenOpcional = (
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+) => {
+  const authHeader = req.headers['authorization'];
+
+  // Si no hay encabezado de autorización, continúa como anónimo
+  if (!authHeader) {
+    return next();
+  }
+
+  // Si el formato no es "Bearer <token>", continúa sin frenar
+  const partes = authHeader.split(' ');
+  if (partes.length !== 2 || partes[0] !== 'Bearer' || !partes[1]) {
+    return next();
+  }
+
+  jwt.verify(
+    partes[1],
+    SECRET_KEY_JWT,
+    { algorithms: ['HS256'] },
+    (err, decoded) => {
+      // Si el token era válido y no expiró, le adjuntamos el usuario al request
+      if (!err && decoded) {
+        (req as any).usuario = decoded;
+      }
+      next();
+    },
+  );
+};
+
+  // Fábrica de middlewares para verificar roles leyendo siempre de req.usuario (decodificado del JWT)
   export const permitirRoles = (rolesPermitidos: RolUsuario[]) => {
     return (req: Request, res: Response, next: NextFunction) => {
       const usuario = (req as any).usuario;
-
       if (!usuario || !rolesPermitidos.includes(usuario.rol)) {
         return res.status(403).json({ message: 'Acceso denegado.' });
       }
-
       next();
     };
   };

@@ -1,5 +1,11 @@
 import type { Request, Response, NextFunction } from 'express';
-import { leerId, manejarError, sumarMeses, esFechaValida, hoyISO } from '../shared/utils.js';
+import {
+  leerId,
+  manejarError,
+  sumarMeses,
+  esFechaValida,
+  hoyISO,
+} from '../shared/utils.js';
 import { orm } from '../shared/db/orm.js';
 import { Membresia, EstadoMembresia } from './membresia.entity.js';
 import { Usuario, RolUsuario } from '../usuario/usuario.entity.js';
@@ -13,8 +19,16 @@ const em = orm.em;
 
 async function findAll(req: Request, res: Response) {
   try {
-    const membresias = await em.find(Membresia, {});
-    res.status(200).json({ message: 'Membresias encontradas', data: membresias });
+    const usuarioAutenticado = (req as any).usuario;
+    const filtro =
+      usuarioAutenticado.rol === RolUsuario.CLIENTE
+        ? { cliente: usuarioAutenticado.id }
+        : {};
+
+    const membresias = await em.find(Membresia, filtro);
+    res
+      .status(200)
+      .json({ message: 'Membresias encontradas', data: membresias });
   } catch (error) {
     manejarError(res, error, { req });
   }
@@ -29,6 +43,18 @@ async function findOne(req: Request, res: Response) {
     if (!membresia) {
       return res.status(404).json({ message: 'Membresia no encontrada' });
     }
+
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.CLIENTE &&
+      membresia.cliente.id !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message:
+          'No tenés permiso para consultar una membresía de otro cliente.',
+      });
+    }
+
     res.status(200).json({ message: 'Membresia encontrada', data: membresia });
   } catch (error) {
     manejarError(res, error, { req });
@@ -39,17 +65,32 @@ async function add(req: Request, res: Response) {
   try {
     const datosLimpios = req.body.sanitizedInput;
 
-    // 1. Verificar que el Usuario relacionado exista
-    const usuarioEntity = await em.findOne(Usuario, { id: datosLimpios.usuarioId });
-    if (!usuarioEntity) {
-      return res.status(404).json({ message: 'El Usuario asociado no existe' });
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.CLIENTE &&
+      datosLimpios.clienteId !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message:
+          'No tenés permiso para crear una membresía a nombre de otro cliente.',
+      });
+    }
+
+    // 1. Verificar que el Cliente relacionado exista
+    const clienteEntity = await em.findOne(Usuario, {
+      id: datosLimpios.clienteId,
+    });
+    if (!clienteEntity) {
+      return res.status(404).json({ message: 'El Cliente asociado no existe' });
     }
 
     // 2. ¡VALIDACIÓN DE ROL! Asegurar que solo un cliente pueda tener membresías
-    if (usuarioEntity.rol !== RolUsuario.CLIENTE) {
-      return res.status(400).json({ 
-        message: 'Error de validación', 
-        errores: ['Solo los usuarios con rol de cliente pueden contratar membresías.'] 
+    if (clienteEntity.rol !== RolUsuario.CLIENTE) {
+      return res.status(400).json({
+        message: 'Error de validación',
+        errores: [
+          'Solo los usuarios con rol de cliente pueden contratar membresías.',
+        ],
       });
     }
 
@@ -60,9 +101,9 @@ async function add(req: Request, res: Response) {
     }
 
     // 4. Asignar las entidades y limpiar los IDs planos
-    datosLimpios.usuario = usuarioEntity;
+    datosLimpios.cliente = clienteEntity;
     datosLimpios.plan = planEntity;
-    delete datosLimpios.usuarioId;
+    delete datosLimpios.clienteId;
     delete datosLimpios.planId;
 
     const membresia = em.create(Membresia, datosLimpios);
@@ -80,25 +121,31 @@ async function update(req: Request, res: Response) {
 
     const membresia = await em.findOne(Membresia, { id });
     if (!membresia) {
-      return res.status(404).json({ message: 'Membresia no encontrada.' });
+      return res.status(404).json({ message: 'Membresia no encontrada' });
     }
-    
+
     const datosLimpios = req.body.sanitizedInput;
 
-    // Si mandan usuarioId en el update, validar rol y existencia
-    if (datosLimpios.usuarioId !== undefined) {
-      const usuarioEntity = await em.findOne(Usuario, { id: datosLimpios.usuarioId });
-      if (!usuarioEntity) {
-        return res.status(404).json({ message: 'El Usuario asociado no existe' });
+    // Si mandan clienteId en el update, validar rol y existencia
+    if (datosLimpios.clienteId !== undefined) {
+      const clienteEntity = await em.findOne(Usuario, {
+        id: datosLimpios.clienteId,
+      });
+      if (!clienteEntity) {
+        return res
+          .status(404)
+          .json({ message: 'El Cliente asociado no existe' });
       }
-      if (usuarioEntity.rol !== RolUsuario.CLIENTE) {
-        return res.status(400).json({ 
-          message: 'Error de validación', 
-          errores: ['Solo los usuarios con rol de cliente pueden contratar membresías.'] 
+      if (clienteEntity.rol !== RolUsuario.CLIENTE) {
+        return res.status(400).json({
+          message: 'Error de validación',
+          errores: [
+            'Solo los usuarios con rol de cliente pueden contratar membresías.',
+          ],
         });
       }
-      datosLimpios.usuario = usuarioEntity;
-      delete datosLimpios.usuarioId;
+      datosLimpios.cliente = clienteEntity;
+      delete datosLimpios.clienteId;
     }
 
     // Si mandan planId en el update, verificar existencia
@@ -114,7 +161,6 @@ async function update(req: Request, res: Response) {
     em.assign(membresia, datosLimpios);
     await em.flush();
     res.status(200).json({ message: 'Membresia actualizada', data: membresia });
-  
   } catch (error) {
     manejarError(res, error, { req });
   }
@@ -132,7 +178,6 @@ async function remove(req: Request, res: Response) {
 
     await em.remove(membresia).flush();
     res.status(200).json({ message: 'Membresia eliminada' });
-
   } catch (error) {
     manejarError(res, error, {
       mensajeForeignKey:
@@ -142,40 +187,44 @@ async function remove(req: Request, res: Response) {
   }
 }
 
-function sanitizeMembresiaInput(req: Request, res: Response, next: NextFunction) {
+function sanitizeMembresiaInput(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   const body = req.body;
   const errores: string[] = [];
 
   // El cuerpo debe ser un objeto.
-  if (
-    typeof body !== 'object' ||
-    body === null ||
-    Array.isArray(body)
-  ) {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
     return res.status(400).json({
       message: 'Datos inválidos',
       errores: ['El cuerpo debe ser un objeto'],
     });
   }
 
-  // 1. Validar 'usuarioId'
-  if (body.usuarioId === undefined) {
-    if (req.method !== 'PATCH') errores.push('El ID de usuario es obligatorio');
-
-  } else if (typeof body.usuarioId !== 'number' || !Number.isInteger(body.usuarioId) || body.usuarioId <= 0) {
-    errores.push('El ID de usuario debe ser un número entero válido');
+  // 1. Validar 'clienteId'
+  if (body.clienteId === undefined) {
+    if (req.method !== 'PATCH') errores.push('El ID de cliente es obligatorio');
+  } else if (
+    typeof body.clienteId !== 'number' ||
+    !Number.isInteger(body.clienteId) ||
+    body.clienteId <= 0
+  ) {
+    errores.push('El ID de cliente debe ser un número entero válido');
   }
 
   // 2. Validar 'planId'
   if (body.planId === undefined) {
     if (req.method !== 'PATCH') errores.push('El ID de plan es obligatorio');
-
-  } else if (typeof body.planId !== 'number' || !Number.isInteger(body.planId) || body.planId <= 0) {
+  } else if (
+    typeof body.planId !== 'number' ||
+    !Number.isInteger(body.planId) ||
+    body.planId <= 0
+  ) {
     errores.push('El ID de plan debe ser un número entero válido');
   }
 
-  // 3. Validar 'fechaInicio'
-  
   // 3. Validar 'fechaInicio'
   if (body.fechaInicio === undefined) {
     if (req.method !== 'PATCH') {
@@ -186,17 +235,14 @@ function sanitizeMembresiaInput(req: Request, res: Response, next: NextFunction)
     !esFechaValida(body.fechaInicio.trim())
   ) {
     errores.push(
-      'La fecha de inicio debe ser una fecha válida con formato YYYY-MM-DD'
+      'La fecha de inicio debe ser una fecha válida con formato YYYY-MM-DD',
     );
   } else if (body.fechaInicio.trim() < hoyISO()) {
     errores.push(
-      'La fecha de inicio de una membresía no puede ser en el pasado'
+      'La fecha de inicio de una membresía no puede ser en el pasado',
     );
   }
 
-
-  // 4. Validar 'fechaFin'
-  
   // 4. Validar 'fechaFin'
   if (body.fechaFin === undefined) {
     if (req.method !== 'PATCH') {
@@ -207,18 +253,16 @@ function sanitizeMembresiaInput(req: Request, res: Response, next: NextFunction)
     !esFechaValida(body.fechaFin.trim())
   ) {
     errores.push(
-      'La fecha de fin debe ser una fecha válida con formato YYYY-MM-DD'
+      'La fecha de fin debe ser una fecha válida con formato YYYY-MM-DD',
     );
   } else if (body.fechaFin.trim() < hoyISO()) {
-    errores.push(
-      'La fecha de fin de una membresía no puede ser en el pasado'
-    );
+    errores.push('La fecha de fin de una membresía no puede ser en el pasado');
   }
-
 
   // 5. Validar 'estadoMembresia'
   if (body.estadoMembresia === undefined) {
-    if (req.method !== 'PATCH') errores.push('El estado para la membresía es obligatorio');
+    if (req.method !== 'PATCH')
+      errores.push('El estado para la membresía es obligatorio');
   } else if (!Object.values(EstadoMembresia).includes(body.estadoMembresia)) {
     errores.push(
       `El estado de la membresía debe ser uno de: ${Object.values(EstadoMembresia).join(', ')}`,
@@ -232,11 +276,13 @@ function sanitizeMembresiaInput(req: Request, res: Response, next: NextFunction)
   // Construir objeto limpio asegurando que solo se incluyan los campos provistos
   const datosLimpios: Record<string, unknown> = {};
 
-  if (body.usuarioId !== undefined) datosLimpios.usuarioId = body.usuarioId;
+  if (body.clienteId !== undefined) datosLimpios.clienteId = body.clienteId;
   if (body.planId !== undefined) datosLimpios.planId = body.planId;
-  if (body.fechaInicio !== undefined) datosLimpios.fechaInicio = body.fechaInicio.trim();
+  if (body.fechaInicio !== undefined)
+    datosLimpios.fechaInicio = body.fechaInicio.trim();
   if (body.fechaFin !== undefined) datosLimpios.fechaFin = body.fechaFin.trim();
-  if (body.estadoMembresia !== undefined) datosLimpios.estadoMembresia = String(body.estadoMembresia).trim();
+  if (body.estadoMembresia !== undefined)
+    datosLimpios.estadoMembresia = body.estadoMembresia;
 
   if (Object.keys(datosLimpios).length === 0) {
     return res.status(400).json({ message: 'No hay datos para modificar' });

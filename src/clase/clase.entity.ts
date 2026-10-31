@@ -4,6 +4,16 @@ import type { Inscripcion } from '../inscripcion/inscripcion.entity.js';
 import type { Disciplina } from '../disciplina/disciplina.entity.js';
 import type { Usuario } from '../usuario/usuario.entity.js';
 
+export enum DiaSemana {
+  LUNES = 'lunes',
+  MARTES = 'martes',
+  MIERCOLES = 'miercoles',
+  JUEVES = 'jueves',
+  VIERNES = 'viernes',
+  SABADO = 'sabado',
+  DOMINGO = 'domingo'
+}
+
 @Entity()
 export class Clase extends BaseEntity {
 
@@ -29,16 +39,6 @@ export class Clase extends BaseEntity {
 
   // Relación: Muchas Clases pertenecen a 1 solo Usuario de rol Entrenador (obligatorio)
   @ManyToOne(() => 'Usuario', { nullable: false })
-  usuario!: Usuario;
+  entrenador!: Usuario;
   
-}
-
-export enum DiaSemana {
-  LUNES = 'lunes',
-  MARTES = 'martes',
-  MIERCOLES = 'miercoles',
-  JUEVES = 'jueves',
-  VIERNES = 'viernes',
-  SABADO = 'sabado',
-  DOMINGO = 'domingo'
 }

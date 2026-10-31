@@ -1,18 +1,36 @@
+@baseUrl = http://localhost:3000/api
 @url = http://localhost:3000/api/membresias
+
+### ==========================================
+### PASO 0: LOGIN AUTOMÁTICO (Hacer clic en "Send Request" aquí una sola vez)
+### ==========================================
+# @name loginRequest
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "prueba.rol.auth@mail.com",
+  "contrasenia": "passwordSeguro123"
+}
+
+### Extraemos automáticamente el token de la respuesta del bloque anterior
+@token = {{loginRequest.response.body.data}}
 
 ### 1. Listar (esperado: 200)
 GET {{url}}
+Authorization: Bearer {{token}}
 
 ### 2. Crear una membresía (esperado: 201)
 # @name crear
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "fechaInicio": "2026-10-22",
-  "fechaFin": "2026-11-15",
+  "fechaInicio": "2026-10-30",
+  "fechaFin": "2026-11-30",
   "estadoMembresia": "activa",
-  "usuarioId": 1,
+  "clienteId": 1,
   "planId": 1
 }
 
@@ -21,68 +39,74 @@ Content-Type: application/json
 
 ### 3. Ver la creada (esperado: 200)
 GET {{url}}/{{id}}
+Authorization: Bearer {{token}}
 
 ### 4. Crear sin fecha de inicio (esperado: 400)
 # errores: ["La fecha de inicio es obligatoria"]
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "fechaFin": "2026-11-15",
+  "fechaFin": "2026-11-30",
   "estadoMembresia": "activa",
-  "usuarioId": 1,
+  "clienteId": 1,
   "planId": 1
 }
 
 ### 5. Crear con fecha de inicio en formato inválido (esperado: 400)
-# errores: ["La fecha de inicio debe tener el formato YYYY-MM-DD"]
+# errores: ["La fecha de inicio debe ser una fecha válida con formato YYYY-MM-DD"]
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
   "fechaInicio": "15-10-2026",
-  "fechaFin": "2026-11-15",
+  "fechaFin": "2026-11-30",
   "estadoMembresia": "activa",
-  "usuarioId": 1,
+  "clienteId": 1,
   "planId": 1
 }
 
 ### 6. Crear con fecha que no existe (esperado: 400)
-# errores: ["La fecha de inicio no es una fecha válida"]
+# errores: ["La fecha de inicio debe ser una fecha válida con formato YYYY-MM-DD"]
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
   "fechaInicio": "2026-02-31",
-  "fechaFin": "2026-11-15",
+  "fechaFin": "2026-11-30",
   "estadoMembresia": "activa",
-  "usuarioId": 1,
+  "clienteId": 1,
   "planId": 1
 }
 
 ### 7. Crear con estado de membresía inválido (esperado: 400)
 # errores: ["El estado de la membresía debe ser uno de: activa, inactiva, cancelada"]
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "fechaInicio": "2026-10-15",
-  "fechaFin": "2026-11-15",
+  "fechaInicio": "2026-10-30",
+  "fechaFin": "2026-11-30",
   "estadoMembresia": "pendiente",
-  "usuarioId": 1,
+  "clienteId": 1,
   "planId": 1
 }
 
 ### 8. Crear segunda membresía para pruebas adicionales (esperado: 201)
 # @name crearExtra
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "fechaInicio": "2026-10-20",
-  "fechaFin": "2027-04-20",
+  "fechaInicio": "2026-10-30",
+  "fechaFin": "2027-04-30",
   "estadoMembresia": "activa",
-  "usuarioId": 1,
+  "clienteId": 1,
   "planId": 1
 }
 
@@ -92,37 +116,42 @@ Content-Type: application/json
 ### 9. Id que no es un número (esperado: 400)
 # "El id debe ser un número entero"
 GET {{url}}/abc
+Authorization: Bearer {{token}}
 
 ### 10. Id que no existe (esperado: 404)
 # "Membresia no encontrada"
 GET {{url}}/99999
+Authorization: Bearer {{token}}
 
 ### 11. PUT completo (esperado: 200)
 PUT {{url}}/{{id}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "fechaInicio": "2026-10-15",
-  "fechaFin": "2026-12-15",
+  "fechaInicio": "2026-10-30",
+  "fechaFin": "2026-12-30",
   "estadoMembresia": "activa",
-  "usuarioId": 1,
+  "clienteId": 1,
   "planId": 1
 }
 
 ### 12. PUT sin fecha de fin (esperado: 400)
 # errores: ["La fecha de fin es obligatoria"]
 PUT {{url}}/{{id}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "fechaInicio": "2026-10-15",
+  "fechaInicio": "2026-10-30",
   "estadoMembresia": "activa",
-  "usuarioId": 1,
+  "clienteId": 1,
   "planId": 1
 }
 
 ### 13. PATCH de una sola parte - cambiar estado (esperado: 200)
 PATCH {{url}}/{{id}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -132,6 +161,7 @@ Content-Type: application/json
 ### 14. PATCH sin datos (esperado: 400)
 # "No hay datos para modificar"
 PATCH {{url}}/{{id}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {}
@@ -139,13 +169,17 @@ Content-Type: application/json
 ### 15. Eliminar la primera membresía (esperado: 200)
 # "Membresia eliminada"
 DELETE {{url}}/{{id}}
+Authorization: Bearer {{token}}
 
 ### 16. Ver la eliminada (esperado: 404)
 # "Membresia no encontrada"
 GET {{url}}/{{id}}
+Authorization: Bearer {{token}}
 
 ### 17. Eliminar la segunda membresía (esperado: 200)
 DELETE {{url}}/{{idExtra}}
+Authorization: Bearer {{token}}
 
 ### 18. Listar para confirmar que quedó vacía (esperado: 200 y data vacío)
 GET {{url}}
+Authorization: Bearer {{token}}

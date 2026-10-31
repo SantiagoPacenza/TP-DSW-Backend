@@ -1,6 +1,6 @@
 import { Entity, Property, ManyToMany, Collection } from '@mikro-orm/core';
 import { BaseEntity } from '../shared/db/baseEntity.entity.js';
-import { Usuario } from '../usuario/usuario.entity.js';
+import type { Usuario } from '../usuario/usuario.entity.js';
 
 @Entity()
 export class Disciplina extends BaseEntity {
@@ -13,6 +13,6 @@ export class Disciplina extends BaseEntity {
 
   // Relación Muchos a Muchos: Una Disciplina tiene muchos Entrenadores que la dictan.
   @ManyToMany(() => 'Usuario', (usuario: Usuario) => usuario.disciplinas)
-  usuarios = new Collection<Usuario>(this);
+  entrenadores = new Collection<Usuario>(this);
 
 }

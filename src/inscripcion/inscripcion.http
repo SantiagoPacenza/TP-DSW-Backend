@@ -1,32 +1,52 @@
+@baseUrl = http://localhost:3000/api
 @url = http://localhost:3000/api/inscripciones
+
+### ==========================================
+### PASO 0: LOGIN AUTOMÁTICO (Hacer clic en "Send Request" aquí una sola vez)
+### ==========================================
+# @name loginRequest
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "prueba.rol.auth@mail.com",
+  "contrasenia": "passwordSeguro123"
+}
+
+### Extraemos automáticamente el token de la respuesta del bloque anterior
+@token = {{loginRequest.response.body.data}}
 
 ### 1. Listar (esperado: 200)
 GET {{url}}
+Authorization: Bearer {{token}}
 
 ### 2. Crear una inscripción (esperado: 201)
 # @name crear
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "usuarioId": 1,
+  "clienteId": 1,
   "claseId": 1,
   "estadoInscripcion": "activa"
 }
 
 ### Variables dinámicas para las peticiones con clave compuesta
 # Nota: Como la fecha se genera automáticamente en el POST (YYYY-MM-DD),
-# reemplaza @fechaInscripcion por la fecha del día en que ejecutes la prueba (ej: 2026-10-13)
-@usuarioId = 1
+# reemplaza @fechaInscripcion por la fecha del día en que ejecutes la prueba (ej: 2026-10-30)
+@clienteId = 1
 @claseId = 1
-@fechaInscripcion = 2026-10-13
+@fechaInscripcion = 2026-10-30
 
 ### 3. Ver la creada usando clave compuesta en la URL (esperado: 200)
-GET {{url}}/{{usuarioId}}/{{claseId}}/{{fechaInscripcion}}
+GET {{url}}/{{clienteId}}/{{claseId}}/{{fechaInscripcion}}
+Authorization: Bearer {{token}}
 
-### 4. Crear sin usuarioId (esperado: 400)
-# errores: ["El ID de usuario es obligatorio"]
+### 4. Crear sin clienteId (esperado: 400)
+# errores: ["El ID de cliente es obligatorio"]
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -37,20 +57,22 @@ Content-Type: application/json
 ### 5. Crear sin claseId (esperado: 400)
 # errores: ["El ID de clase es obligatorio"]
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "usuarioId": 1,
+  "clienteId": 1,
   "estadoInscripcion": "activa"
 }
 
 ### 6. Crear con estado de inscripción inválido (esperado: 400)
 # errores: ["El estado de la inscripción debe ser uno de: activa, finalizada, cancelada"]
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "usuarioId": 1,
+  "clienteId": 1,
   "claseId": 1,
   "estadoInscripcion": "pendiente"
 }
@@ -58,21 +80,23 @@ Content-Type: application/json
 ### 7. Crear con usuario que no es cliente (esperado: 400)
 # errores: ["Solo los usuarios con rol de cliente pueden inscribirse a las clases."]
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "usuarioId": 2,
+  "clienteId": 2,
   "claseId": 1,
   "estadoInscripcion": "activa"
 }
 
-### 8. Crear con usuario que no existe (esperado: 404)
-# "El Usuario asociado no existe"
+### 8. Crear con cliente que no existe (esperado: 404)
+# "El Cliente asociado no existe"
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "usuarioId": 99999,
+  "clienteId": 99999,
   "claseId": 1,
   "estadoInscripcion": "activa"
 }
@@ -80,10 +104,11 @@ Content-Type: application/json
 ### 9. Crear con clase que no existe (esperado: 404)
 # "La Clase asociada no existe"
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "usuarioId": 1,
+  "clienteId": 1,
   "claseId": 99999,
   "estadoInscripcion": "activa"
 }
@@ -91,38 +116,43 @@ Content-Type: application/json
 ### 10. Crear segunda inscripción para pruebas adicionales (esperado: 201)
 # @name crearExtra
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "usuarioId": 3,
+  "clienteId": 3,
   "claseId": 1,
   "estadoInscripcion": "activa"
 }
 
-@usuarioIdExtra = 1
-@claseIdExtra = 2
-@fechaInscripcionExtra = 2026-10-13
+@clienteIdExtra = 3
+@claseIdExtra = 1
+@fechaInscripcionExtra = 2026-10-30
 
 ### 11. Parámetros de ruta con formato inválido (esperado: 400)
-GET {{url}}/abc/def/2026-10-13
+GET {{url}}/abc/def/2026-10-30
+Authorization: Bearer {{token}}
 
 ### 12. Inscripción que no existe en la ruta compuesta (esperado: 404)
 # "Inscripción no encontrada"
-GET {{url}}/99999/99999/2026-10-13
+GET {{url}}/99999/99999/2026-10-30
+Authorization: Bearer {{token}}
 
 ### 13. PUT completo de la inscripción (esperado: 200)
-PUT {{url}}/{{usuarioId}}/{{claseId}}/{{fechaInscripcion}}
+PUT {{url}}/{{clienteId}}/{{claseId}}/{{fechaInscripcion}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "usuarioId": 1,
+  "clienteId": 1,
   "claseId": 1,
   "estadoInscripcion": "finalizada",
-  "fechaInscripcion": "2026-10-13"
+  "fechaInscripcion": "2026-10-30"
 }
 
 ### 14. PATCH para cambiar solo el estado (esperado: 200)
-PATCH {{url}}/{{usuarioId}}/{{claseId}}/{{fechaInscripcion}}
+PATCH {{url}}/{{clienteId}}/{{claseId}}/{{fechaInscripcion}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -131,21 +161,26 @@ Content-Type: application/json
 
 ### 15. PATCH sin datos para modificar (esperado: 400)
 # "No hay datos para modificar"
-PATCH {{url}}/{{usuarioId}}/{{claseId}}/{{fechaInscripcion}}
+PATCH {{url}}/{{clienteId}}/{{claseId}}/{{fechaInscripcion}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {}
 
 ### 16. Eliminar la primera inscripción (esperado: 200)
 # "Inscripción eliminada"
-DELETE {{url}}/{{usuarioId}}/{{claseId}}/{{fechaInscripcion}}
+DELETE {{url}}/{{clienteId}}/{{claseId}}/{{fechaInscripcion}}
+Authorization: Bearer {{token}}
 
 ### 17. Ver la eliminada (esperado: 404)
 # "Inscripción no encontrada"
-GET {{url}}/{{usuarioId}}/{{claseId}}/{{fechaInscripcion}}
+GET {{url}}/{{clienteId}}/{{claseId}}/{{fechaInscripcion}}
+Authorization: Bearer {{token}}
 
 ### 18. Eliminar la segunda inscripción (esperado: 200)
-DELETE {{url}}/{{usuarioIdExtra}}/{{claseIdExtra}}/{{fechaInscripcionExtra}}
+DELETE {{url}}/{{clienteIdExtra}}/{{claseIdExtra}}/{{fechaInscripcionExtra}}
+Authorization: Bearer {{token}}
 
 ### 19. Listar para confirmar que quedó vacía (esperado: 200 y data vacío)
 GET {{url}}
+Authorization: Bearer {{token}}

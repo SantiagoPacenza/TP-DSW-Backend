@@ -11,8 +11,8 @@ export class Plan extends BaseEntity {
   @Property({ type: 'decimal', precision: 10, scale: 2, nullable: false })
   precio!: string; // Mapeado como string para preservar la precisión monetaria/decimal exacta
 
-  @Property({ type: 'boolean' })
-  incluyeClasesGrupales!: boolean;
+  @Property({ type: 'boolean', default: false })
+  incluyeClasesGrupales: boolean = false;
 
   @Property({ type: 'int' })
   duracionEnMeses!: number;

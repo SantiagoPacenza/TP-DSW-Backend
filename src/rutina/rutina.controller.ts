@@ -136,6 +136,16 @@ async function add(req: Request, res: Response) {
   try {
     const datosLimpios = req.body.sanitizedInput;
 
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.ENTRENADOR &&
+      datosLimpios.entrenadorId !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para crear una rutina a nombre de otro entrenador.',
+      });
+    }
+
     // Verificamos que el entrenador exista
     const entrenador = await em.findOne(Usuario, {
       id: datosLimpios.entrenadorId,
@@ -185,6 +195,16 @@ async function update(req: Request, res: Response) {
       });
     }
 
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.ENTRENADOR &&
+      rutina.entrenador.id !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para modificar una rutina de otro entrenador.',
+      });
+    }
+
     const datosLimpios = req.body.sanitizedInput;
 
     // El entrenador que creó la rutina no se puede cambiar.
@@ -220,6 +240,16 @@ async function remove(req: Request, res: Response) {
     if (!rutina) {
       return res.status(404).json({
         message: 'Rutina no encontrada',
+      });
+    }
+
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.ENTRENADOR &&
+      rutina.entrenador.id !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para eliminar una rutina de otro entrenador.',
       });
     }
 

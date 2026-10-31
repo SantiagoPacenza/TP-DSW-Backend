@@ -7,12 +7,13 @@ import {
   update,
   remove,
 } from './ejercicio.controller.js';
+import { verificarToken, isAdminEntrenador } from '../auth/auth.middleware.js';
 
 export const ejercicioRouter = Router();
 
-ejercicioRouter.get('/', findAll);
-ejercicioRouter.get('/:id', findOne);
-ejercicioRouter.post('/', sanitizeEjercicioInput, add);
-ejercicioRouter.put('/:id', sanitizeEjercicioInput, update);
-ejercicioRouter.patch('/:id', sanitizeEjercicioInput, update);
-ejercicioRouter.delete('/:id', remove);
+ejercicioRouter.get('/', verificarToken, findAll);
+ejercicioRouter.get('/:id', verificarToken, findOne);
+ejercicioRouter.post('/', verificarToken, isAdminEntrenador, sanitizeEjercicioInput, add);
+ejercicioRouter.put('/:id', verificarToken, isAdminEntrenador, sanitizeEjercicioInput, update);
+ejercicioRouter.patch('/:id', verificarToken, isAdminEntrenador, sanitizeEjercicioInput, update);
+ejercicioRouter.delete('/:id', verificarToken, isAdminEntrenador, remove);

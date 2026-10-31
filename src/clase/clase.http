@@ -1,4 +1,20 @@
+@baseUrl = http://localhost:3000/api
 @url = http://localhost:3000/api/clases
+
+### ==========================================
+### PASO 0: LOGIN AUTOMÁTICO (Hacer clic en "Send Request" aquí una sola vez)
+### ==========================================
+# @name loginRequest
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "prueba.rol.auth@mail.com",
+  "contrasenia": "passwordSeguro123"
+}
+
+### Extraemos automáticamente el token de la respuesta del bloque anterior
+@token = {{loginRequest.response.body.data}}
 
 ### 1. Listar (esperado: 200)
 GET {{url}}
@@ -6,6 +22,7 @@ GET {{url}}
 ### 2. Crear una clase (esperado: 201)
 # @name crear
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -14,7 +31,7 @@ Content-Type: application/json
   "horaInicio": "08:00",
   "horaFin": "09:00",
   "disciplinaId": 2,
-  "usuarioId": 7
+  "entrenadorId": 7
 }
 
 ### Guardar el id de la clase creada
@@ -26,18 +43,21 @@ GET {{url}}/{{id}}
 ### 4. Crear sin cupos (esperado: 400)
 # errores: ["El número de cupos es obligatorio"]
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
   "diaSemana": "martes",
   "horaInicio": "10:00",
   "horaFin": "11:00",
-  "disciplinaId": 1
+  "disciplinaId": 1,
+  "entrenadorId": 7
 }
 
 ### 5. Crear con cupos inválidos - negativo o no entero (esperado: 400)
 # errores: ["El número de cupos debe ser un número entero válido"]
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -45,12 +65,14 @@ Content-Type: application/json
   "diaSemana": "martes",
   "horaInicio": "10:00",
   "horaFin": "11:00",
-  "disciplinaId": 1
+  "disciplinaId": 1,
+  "entrenadorId": 7
 }
 
 ### 6. Crear con día de la semana inválido (esperado: 400)
 # errores: ["El día de la semana debe ser uno de: lunes, martes, miercoles, jueves, viernes, sabado, domingo"]
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -58,12 +80,14 @@ Content-Type: application/json
   "diaSemana": "feriado",
   "horaInicio": "10:00",
   "horaFin": "11:00",
-  "disciplinaId": 1
+  "disciplinaId": 1,
+  "entrenadorId": 7
 }
 
 ### 7. Crear con formato de hora inválido (esperado: 400)
 # errores: ["La hora de inicio debe tener el formato HH:mm"]
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -71,24 +95,28 @@ Content-Type: application/json
   "diaSemana": "miercoles",
   "horaInicio": "8 y media",
   "horaFin": "09:30",
-  "disciplinaId": 1
+  "disciplinaId": 1,
+  "entrenadorId": 7
 }
 
 ### 8. Crear sin disciplinaId (esperado: 400)
 # errores: ["La disciplina es obligatoria"]
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
   "cupos": 15,
   "diaSemana": "jueves",
   "horaInicio": "10:00",
-  "horaFin": "11:00"
+  "horaFin": "11:00",
+  "entrenadorId": 7
 }
 
 ### 9. Crear segunda clase para pruebas adicionales (esperado: 201)
 # @name crearExtra
 POST {{url}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -96,7 +124,8 @@ Content-Type: application/json
   "diaSemana": "viernes",
   "horaInicio": "18:00",
   "horaFin": "19:00",
-  "disciplinaId": 1
+  "disciplinaId": 2,
+  "entrenadorId": 7
 }
 
 ### Guardar el id de la segunda clase
@@ -112,6 +141,7 @@ GET {{url}}/99999
 
 ### 12. PUT completo (esperado: 200)
 PUT {{url}}/{{id}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -119,23 +149,27 @@ Content-Type: application/json
   "diaSemana": "lunes",
   "horaInicio": "08:30",
   "horaFin": "09:30",
-  "disciplinaId": 1
+  "disciplinaId": 2,
+  "entrenadorId": 7
 }
 
 ### 13. PUT sin número de cupos (esperado: 400)
 # errores: ["El número de cupos es obligatorio"]
 PUT {{url}}/{{id}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
   "diaSemana": "lunes",
   "horaInicio": "08:30",
   "horaFin": "09:30",
-  "disciplinaId": 1
+  "disciplinaId": 2,
+  "entrenadorId": 7
 }
 
 ### 14. PATCH de una sola propiedad - cambiar cupos (esperado: 200)
 PATCH {{url}}/{{id}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -145,6 +179,7 @@ Content-Type: application/json
 ### 15. PATCH sin datos (esperado: 400)
 # "No hay datos para modificar"
 PATCH {{url}}/{{id}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {}
@@ -152,6 +187,7 @@ Content-Type: application/json
 ### 16. Eliminar la primera clase (esperado: 200)
 # "Clase eliminada"
 DELETE {{url}}/{{id}}
+Authorization: Bearer {{token}}
 
 ### 17. Ver la eliminada (esperado: 404)
 # "Clase no encontrada"
@@ -159,6 +195,7 @@ GET {{url}}/{{id}}
 
 ### 18. Eliminar la segunda clase (esperado: 200)
 DELETE {{url}}/{{idExtra}}
+Authorization: Bearer {{token}}
 
 ### 19. Listar para confirmar que quedó vacía (esperado: 200 y data vacío)
 GET {{url}}

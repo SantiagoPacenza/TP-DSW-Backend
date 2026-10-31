@@ -39,7 +39,7 @@ POST {{urlPlanes}}
 Content-Type: application/json
 
 {
-  "nombre": "Plan Total 22",
+  "nombre": "Plan Total 222",
   "precio": 20000.50,
   "incluyeClasesGrupales": false,
   "duracionEnMeses": 3,
@@ -74,11 +74,10 @@ Authorization: Bearer {{token}}
 
 ### Intentar crear un plan como cliente
 POST {{urlPlanes}}
-Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "nombre": "Plan no autorizado3",
+  "nombre": "Plan no autorizado4",
   "precio": 5000,
   "incluyeClasesGrupales": false,
   "duracionEnMeses": 1,

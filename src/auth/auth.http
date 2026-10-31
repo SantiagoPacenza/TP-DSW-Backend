@@ -1,6 +1,7 @@
 @url = http://localhost:3000/api
 @emailPrivilegiado = prueba.rol.auth@mail.com
-@contraseniaPrivilegiada = passwordSeguro123
+@contraseniaPrivilegiada = passwordSeguro123z
+
 
 ### 1. Registrar un nuevo cliente sin enviar rol (Esperado: 201 Created y rol cliente)
 POST {{url}}/registro

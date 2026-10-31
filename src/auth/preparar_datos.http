@@ -1,0 +1,317 @@
+# ==============================================================================
+# SCRIPT DE PREPARACIÓN DE DATOS PARA TESTING (solo cuando la BD está vacía)
+# Ejecutar cada request en orden de arriba hacia abajo (1 solo clic en cada una).
+# ==============================================================================
+
+@baseUrl = http://localhost:3000/api
+
+
+# ------------------------------------------------------------------------------
+# FASE 1: AUTOREGISTRO PÚBLICO (Crea los 2 primeros usuarios)
+# ------------------------------------------------------------------------------
+
+### 1. Registrar a Cliente 1 (tendrá ID 1 en la base de datos)
+POST {{baseUrl}}/registro
+Content-Type: application/json
+
+{
+  "nombre": "Carlos",
+  "apellido": "Perez",
+  "fechaNacimiento": "1995-04-12",
+  "nombreUsuario": "carloscliente",
+  "email": "carlos@mail.com",
+  "contrasenia": "passwordSeguro123"
+}
+
+### 2. Registrar al usuario que será Admin (tendrá ID 2)
+POST {{baseUrl}}/registro
+Content-Type: application/json
+
+{
+  "nombre": "Admin",
+  "apellido": "Prueba",
+  "fechaNacimiento": "1990-01-01",
+  "nombreUsuario": "adminprueba",
+  "email": "prueba.rol.auth@mail.com",
+  "contrasenia": "passwordSeguro123"
+}
+
+
+# ==============================================================================
+# ⚠️ IMPORTANTE: PASO MANUAL EN MYSQL ANTES DE SEGUIR ⚠️
+# Abrí tu MySQL y ejecutá esta consulta para otorgar rol de administrador:
+#
+# UPDATE usuario SET rol = 'admin' WHERE email = 'prueba.rol.auth@mail.com';
+#
+# Una vez ejecutada la consulta, continuá con el paso 3 hacia abajo.
+# ==============================================================================
+
+
+# ------------------------------------------------------------------------------
+# FASE 2: LOGIN ADMIN Y CARGA DE USUARIOS RESTANTES Y CATÁLOGOS
+# ------------------------------------------------------------------------------
+
+### 3. Login como Admin
+# @name loginAdmin
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "prueba.rol.auth@mail.com",
+  "contrasenia": "passwordSeguro123"
+}
+
+### Guardar Token de Admin
+@tokenAdmin = {{loginAdmin.response.body.data}}
+
+### 4. Admin crea al Cliente 2 (tendrá ID 3)
+POST {{baseUrl}}/usuarios
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "rol": "cliente",
+  "nombre": "Ana",
+  "apellido": "Gomez",
+  "fechaNacimiento": "1998-07-20",
+  "nombreUsuario": "anacliente",
+  "email": "ana@mail.com",
+  "contrasenia": "clave123"
+}
+
+### 5. Admin crea al Entrenador 1 (tendrá ID 4)
+POST {{baseUrl}}/usuarios
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "rol": "entrenador",
+  "nombre": "Carlos",
+  "apellido": "Lopez",
+  "fechaNacimiento": "1990-05-15",
+  "nombreUsuario": "carlosentrenador",
+  "email": "carlos.entrenador@mail.com",
+  "contrasenia": "clave123"
+}
+
+### 6. Admin crea al Entrenador 2 (tendrá ID 5 - Entrenador ajeno)
+POST {{baseUrl}}/usuarios
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "rol": "entrenador",
+  "nombre": "Luis",
+  "apellido": "Fernandez",
+  "fechaNacimiento": "1988-03-10",
+  "nombreUsuario": "luisentrenador",
+  "email": "luis.entrenador@mail.com",
+  "contrasenia": "clave123"
+}
+
+### 7. Admin crea el Plan 1
+POST {{baseUrl}}/planes
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "nombre": "Plan Total",
+  "precio": 15000.50,
+  "incluyeClasesGrupales": true,
+  "duracionEnMeses": 6,
+  "descripcion": "Acceso total a musculación y clases."
+}
+
+### 8. Admin crea la Disciplina 1
+POST {{baseUrl}}/disciplinas
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "nombre": "Functional Training",
+  "descripcion": "Entrenamiento funcional de alta intensidad."
+}
+
+### 9. Admin habilita Disciplina 1 a Entrenador 1 (ID 4)
+PUT {{baseUrl}}/usuarios/4/disciplinas
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "disciplinaIds": [1]
+}
+
+### 10. Admin habilita Disciplina 1 a Entrenador 2 (ID 5)
+PUT {{baseUrl}}/usuarios/5/disciplinas
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "disciplinaIds": [1]
+}
+
+
+# ------------------------------------------------------------------------------
+# FASE 3: SOLICITUDES Y MEMBRESÍAS (CLIENTE 1 Y CLIENTE 2)
+# ------------------------------------------------------------------------------
+
+### 11. Login como Cliente 1 (Carlos, ID 1)
+# @name loginCliente1
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "carlos@mail.com",
+  "contrasenia": "passwordSeguro123"
+}
+
+### Guardar Token de Cliente 1
+@tokenCliente1 = {{loginCliente1.response.body.data}}
+
+### 12. Cliente 1 crea su Solicitud (tendrá ID 1 - solicitudPropiaId)
+POST {{baseUrl}}/solicitudes
+Authorization: Bearer {{tokenCliente1}}
+Content-Type: application/json
+
+{
+  "clienteId": 1,
+  "peso": 75,
+  "masaMuscular": 32,
+  "altura": 1.80,
+  "objetivo": "Aumentar masa muscular",
+  "lesionesPrevias": "Ninguna"
+}
+
+### 13. Cliente 1 contrata su Membresía (tendrá ID 1 - membresiaPropiaId)
+POST {{baseUrl}}/membresias
+Authorization: Bearer {{tokenCliente1}}
+Content-Type: application/json
+
+{
+  "clienteId": 1,
+  "planId": 1,
+  "fechaInicio": "2026-10-31",
+  "fechaFin": "2027-04-30",
+  "estadoMembresia": "activa"
+}
+
+### 14. Login como Cliente 2 (Ana, ID 3)
+# @name loginCliente2
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "ana@mail.com",
+  "contrasenia": "clave123"
+}
+
+### Guardar Token de Cliente 2
+@tokenCliente2 = {{loginCliente2.response.body.data}}
+
+### 15. Cliente 2 crea su Solicitud (tendrá ID 2 - solicitudAjenaId)
+POST {{baseUrl}}/solicitudes
+Authorization: Bearer {{tokenCliente2}}
+Content-Type: application/json
+
+{
+  "clienteId": 3,
+  "peso": 60,
+  "masaMuscular": 25,
+  "altura": 1.65,
+  "objetivo": "Tonificación general",
+  "lesionesPrevias": "Ninguna"
+}
+
+### 16. Cliente 2 contrata su Membresía (tendrá ID 2 - membresiaAjenaId)
+POST {{baseUrl}}/membresias
+Authorization: Bearer {{tokenCliente2}}
+Content-Type: application/json
+
+{
+  "clienteId": 3,
+  "planId": 1,
+  "fechaInicio": "2026-10-31",
+  "fechaFin": "2027-04-30",
+  "estadoMembresia": "activa"
+}
+
+
+# ------------------------------------------------------------------------------
+# FASE 4: CLASES Y RUTINAS (ENTRENADOR 1 Y ENTRENADOR 2)
+# ------------------------------------------------------------------------------
+
+### 17. Login como Entrenador 1 (Carlos, ID 4)
+# @name loginEntrenador1
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "carlos.entrenador@mail.com",
+  "contrasenia": "clave123"
+}
+
+### Guardar Token de Entrenador 1
+@tokenEntrenador1 = {{loginEntrenador1.response.body.data}}
+
+### 18. Entrenador 1 crea su Clase (tendrá ID 1)
+POST {{baseUrl}}/clases
+Authorization: Bearer {{tokenEntrenador1}}
+Content-Type: application/json
+
+{
+  "cupos": 20,
+  "diaSemana": "lunes",
+  "horaInicio": "08:00",
+  "horaFin": "09:00",
+  "disciplinaId": 1,
+  "entrenadorId": 4
+}
+
+### 19. Entrenador 1 crea su Rutina (tendrá ID 1)
+POST {{baseUrl}}/rutinas
+Authorization: Bearer {{tokenEntrenador1}}
+Content-Type: application/json
+
+{
+  "nombre": "Rutina Fuerza Entrenador 1",
+  "descripcion": "Rutina para principiantes",
+  "entrenadorId": 4
+}
+
+### 20. Login como Entrenador 2 (Luis, ID 5 - Entrenador Ajeno)
+# @name loginEntrenador2
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "luis.entrenador@mail.com",
+  "contrasenia": "clave123"
+}
+
+### Guardar Token de Entrenador 2
+@tokenEntrenador2 = {{loginEntrenador2.response.body.data}}
+
+### 21. Entrenador 2 crea su Clase (tendrá ID 2 - claseAjenaId para Carlos)
+POST {{baseUrl}}/clases
+Authorization: Bearer {{tokenEntrenador2}}
+Content-Type: application/json
+
+{
+  "cupos": 15,
+  "diaSemana": "martes",
+  "horaInicio": "10:00",
+  "horaFin": "11:00",
+  "disciplinaId": 1,
+  "entrenadorId": 5
+}
+
+### 22. Entrenador 2 crea su Rutina (tendrá ID 2 - rutinaAjenaId para Carlos)
+POST {{baseUrl}}/rutinas
+Authorization: Bearer {{tokenEntrenador2}}
+Content-Type: application/json
+
+{
+  "nombre": "Rutina Hipertrofia Entrenador 2",
+  "descripcion": "Rutina de entrenador ajeno",
+  "entrenadorId": 5
+}

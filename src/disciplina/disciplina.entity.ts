@@ -13,6 +13,6 @@ export class Disciplina extends BaseEntity {
 
   // Relación Muchos a Muchos: Una Disciplina tiene muchos Entrenadores que la dictan.
   @ManyToMany(() => 'Usuario', (usuario: Usuario) => usuario.disciplinas)
-  usuarios = new Collection<Usuario>(this);
+  entrenadores = new Collection<Usuario>(this);
 
 }

@@ -7,12 +7,13 @@ import {
   update,
   remove,
 } from './categoria.controller.js';
+import { verificarToken, isAdminEntrenador } from '../auth/auth.middleware.js';
 
 export const categoriaRouter = Router();
 
-categoriaRouter.get('/', findAll);
-categoriaRouter.get('/:id', findOne);
-categoriaRouter.post('/', sanitizeCategoriaInput, add);
-categoriaRouter.put('/:id', sanitizeCategoriaInput, update);
-categoriaRouter.patch('/:id', sanitizeCategoriaInput, update);
-categoriaRouter.delete('/:id', remove);
+categoriaRouter.get('/', verificarToken, findAll);
+categoriaRouter.get('/:id', verificarToken, findOne);
+categoriaRouter.post('/', verificarToken, isAdminEntrenador, sanitizeCategoriaInput, add);
+categoriaRouter.put('/:id', verificarToken, isAdminEntrenador, sanitizeCategoriaInput, update);
+categoriaRouter.patch('/:id', verificarToken, isAdminEntrenador, sanitizeCategoriaInput, update);
+categoriaRouter.delete('/:id', verificarToken, isAdminEntrenador, remove);

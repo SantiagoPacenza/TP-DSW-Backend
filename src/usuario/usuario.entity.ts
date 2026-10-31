@@ -47,13 +47,13 @@ export class Usuario extends BaseEntity {
   telefono?: string;
 
   // Relación: 1 Usuario (con rol cliente) puede tener N Membresías (tipamos explícitamente el parámetro)
-  @OneToMany(() => 'Membresia', (membresia: Membresia) => membresia.usuario)
+  @OneToMany(() => 'Membresia', (membresia: Membresia) => membresia.cliente)
   membresias = new Collection<Membresia>(this);
 
   // Relación: 1 Usuario (con rol cliente) puede tener N Inscripciones
   @OneToMany(
     () => 'Inscripcion',
-    (inscripcion: Inscripcion) => inscripcion.usuario,
+    (inscripcion: Inscripcion) => inscripcion.cliente,
   )
   inscripciones = new Collection<Inscripcion>(this);
 
@@ -61,13 +61,13 @@ export class Usuario extends BaseEntity {
   @OneToMany(() => 'Solicitud', (solicitud: Solicitud) => solicitud.cliente)
   solicitudes = new Collection<Solicitud>(this);
   // Relación: 1 Usuario (con rol entrenador) tiene asociadas las N Clases que dicta
-  @OneToMany(() => 'Clase', (clase: Clase) => clase.usuario)
+  @OneToMany(() => 'Clase', (clase: Clase) => clase.entrenador)
   clases = new Collection<Clase>(this);
 
   // Relación Muchos a Muchos: Un Usuario esta habilitado para muchas Disciplinas (y es el dueño de la relación)
   @ManyToMany(
     () => 'Disciplina',
-    (disciplina: Disciplina) => disciplina.usuarios,
+    (disciplina: Disciplina) => disciplina.entrenadores,
     { owner: true },
   )
   disciplinas = new Collection<Disciplina>(this);

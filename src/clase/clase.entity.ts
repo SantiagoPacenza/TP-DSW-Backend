@@ -39,6 +39,6 @@ export class Clase extends BaseEntity {
 
   // Relación: Muchas Clases pertenecen a 1 solo Usuario de rol Entrenador (obligatorio)
   @ManyToOne(() => 'Usuario', { nullable: false })
-  usuario!: Usuario;
+  entrenador!: Usuario;
   
 }

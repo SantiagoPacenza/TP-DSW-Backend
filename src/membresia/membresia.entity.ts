@@ -23,9 +23,9 @@ export class Membresia extends BaseEntity {
   @Enum(() => EstadoMembresia)
   estadoMembresia!: EstadoMembresia;
 
-  // Relación: Muchas membresías pertenecen a 1 solo Usuario (obligatorio)
+  // Relación: Muchas membresías pertenecen a 1 solo Cliente (obligatorio)
   @ManyToOne(() => 'Usuario', { nullable: false })
-  usuario!: Usuario;
+  cliente!: Usuario;
 
   // Relación: Muchas membresías pertenecen a 1 solo Plan (obligatorio)
   @ManyToOne(() => 'Plan', { nullable: false })

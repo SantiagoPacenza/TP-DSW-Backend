@@ -157,6 +157,16 @@ async function findOne(req: Request, res: Response) {
       });
     }
 
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.CLIENTE &&
+      solicitud.cliente.id !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para consultar una solicitud de otro cliente.',
+      });
+    }
+
     res.status(200).json({
       message: 'Solicitud encontrada',
       data: solicitud,
@@ -170,6 +180,16 @@ async function add(req: Request, res: Response) {
   try {
     const datos = req.body.sanitizedInput as Record<string, unknown>;
     const clienteId = datos.clienteId as number;
+
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.CLIENTE &&
+      clienteId !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para crear una solicitud a nombre de otro cliente.',
+      });
+    }
 
     const cliente = await em.findOne(Usuario, { id: clienteId });
 
@@ -294,6 +314,16 @@ async function remove(req: Request, res: Response) {
     if (!solicitud) {
       return res.status(404).json({
         message: 'Solicitud no encontrada',
+      });
+    }
+
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.CLIENTE &&
+      solicitud.cliente.id !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para eliminar una solicitud de otro cliente.',
       });
     }
 

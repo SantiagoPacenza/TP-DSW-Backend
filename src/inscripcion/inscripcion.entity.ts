@@ -11,15 +11,15 @@ export enum EstadoInscripcion {
 }
 @Entity()
 export class Inscripcion {
-  // PK: usuario (tipoCliente) + clase + fechaInscripcion
+  // PK: cliente + clase + fechaInscripcion
 
-  // Relación: Muchas inscripciones pertenecen a 1 solo Usuario (obligatorio)
+  // Relación: Muchas inscripciones pertenecen a 1 solo Cliente (obligatorio)
   @ManyToOne(() => 'Usuario', {
     primary: true,
     nullable: false,
     deleteRule: 'cascade',
   })
-  usuario!: Usuario;
+  cliente!: Usuario;
 
   // Relación: Muchas inscripciones pertenecen a 1 sola Clase (obligatorio)
   @ManyToOne(() => 'Clase', {

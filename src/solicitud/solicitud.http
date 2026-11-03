@@ -18,6 +18,7 @@ Content-Type: application/json
 
 # IMPORTANTE: reemplazá 1 por el ID de un usuario existente cuyo rol sea "cliente",
 # y 2 por el ID de un usuario existente cuyo rol NO sea "cliente" (ej: admin o entrenador).
+# El cliente debe tener una membresía activa y vigente (puede prepararse con preparar_datos.http).
 @clienteId = 1
 @noClienteId = 2
 
@@ -136,14 +137,35 @@ Content-Type: application/json
 
 {}
 
-### 13. Eliminar solicitud (esperado: 200)
+### 13. Aprobar la solicitud (esperado: 200 y estado aprobada)
+PATCH {{url}}/{{id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "estado": "aprobada" }
+
+### 14. Rechazar la solicitud (esperado: 200 y estado rechazada)
+PATCH {{url}}/{{id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "estado": "rechazada" }
+
+### 15. Estado inválido (esperado: 400)
+PATCH {{url}}/{{id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "estado": "otro" }
+
+### 16. Eliminar solicitud (esperado: 200)
 DELETE {{url}}/{{id}}
 Authorization: Bearer {{token}}
 
-### 14. Consultar la solicitud eliminada (esperado: 404)
+### 17. Consultar la solicitud eliminada (esperado: 404)
 GET {{url}}/{{id}}
 Authorization: Bearer {{token}}
 
-### 15. Listar solicitudes al finalizar (esperado: 200)
+### 18. Listar solicitudes al finalizar (esperado: 200)
 GET {{url}}
 Authorization: Bearer {{token}}

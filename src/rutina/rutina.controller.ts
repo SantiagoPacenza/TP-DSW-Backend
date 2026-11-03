@@ -3,7 +3,7 @@ import { leerId, manejarError } from '../shared/utils.js';
 import { orm } from '../shared/db/orm.js';
 import { Rutina, EstadoRutina } from './rutina.entity.js';
 import { Usuario, RolUsuario } from '../usuario/usuario.entity.js';
-import { Solicitud } from '../solicitud/solicitud.entity.js';
+import { Solicitud, EstadoSolicitud } from '../solicitud/solicitud.entity.js';
 
 const em = orm.em;
 
@@ -209,6 +209,7 @@ async function add(req: Request, res: Response) {
     delete datosLimpios.entrenadorId; // Eliminamos entrenadorId ya que no es un campo de la entidad Rutina
 
     const rutina = em.create(Rutina, datosLimpios);
+    solicitud.estado = EstadoSolicitud.APROBADA;
     await em.flush();
     res.status(201).json({
       message: 'Rutina creada',

@@ -1,4 +1,4 @@
-# Ejecutar en orden. Completar credenciales e IDs con datos de prueba existentes.
+# Ejecutar después de preparar_datos.http, en orden. Las membresías deben estar pagadas y activas.
 # clienteId debe corresponder al cliente del login.
 # Las solicitudes y membresias "Propia" son de ese cliente; las "Ajena", de otro.
 # La clase y la rutina ajenas deben pertenecer a OTRO entrenador (y a otra solicitud).
@@ -10,7 +10,7 @@
 @emailCliente = carlos@mail.com
 @claveCliente = passwordSeguro123
 @emailEntrenador = carlos.entrenador@mail.com
-@claveEntrenador = clave123
+@claveEntrenador = clave12345
 @clienteId = 1
 @otroClienteId = 3
 @entrenadorAjenoId = 5
@@ -141,3 +141,10 @@ Content-Type: application/json
 ### 20. Admin lista usuarios (200)
 GET {{url}}/usuarios
 Authorization: Bearer {{admin}}
+
+### 21. Cliente intenta aprobar su propia solicitud (403)
+PATCH {{url}}/solicitudes/{{solicitudPropiaId}}
+Authorization: Bearer {{cliente}}
+Content-Type: application/json
+
+{ "estado": "aprobada" }

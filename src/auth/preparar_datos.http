@@ -76,7 +76,7 @@ Content-Type: application/json
   "fechaNacimiento": "1998-07-20",
   "nombreUsuario": "anacliente",
   "email": "ana@mail.com",
-  "contrasenia": "clave123"
+  "contrasenia": "clave12345"
 }
 
 ### 5. Admin crea al Entrenador 1 (tendrá ID 4)
@@ -91,7 +91,7 @@ Content-Type: application/json
   "fechaNacimiento": "1990-05-15",
   "nombreUsuario": "carlosentrenador",
   "email": "carlos.entrenador@mail.com",
-  "contrasenia": "clave123"
+  "contrasenia": "clave12345"
 }
 
 ### 6. Admin crea al Entrenador 2 (tendrá ID 5 - Entrenador ajeno)
@@ -106,7 +106,7 @@ Content-Type: application/json
   "fechaNacimiento": "1988-03-10",
   "nombreUsuario": "luisentrenador",
   "email": "luis.entrenador@mail.com",
-  "contrasenia": "clave123"
+  "contrasenia": "clave12345"
 }
 
 ### 7. Admin crea el Plan 1
@@ -152,7 +152,7 @@ Content-Type: application/json
 
 
 # ------------------------------------------------------------------------------
-# FASE 3: SOLICITUDES Y MEMBRESÍAS (CLIENTE 1 Y CLIENTE 2)
+# FASE 3: MEMBRESÍAS, PAGOS Y SOLICITUDES (CLIENTE 1 Y CLIENTE 2)
 # ------------------------------------------------------------------------------
 
 ### 11. Login como Cliente 1 (Carlos, ID 1)
@@ -168,7 +168,34 @@ Content-Type: application/json
 ### Guardar Token de Cliente 1
 @tokenCliente1 = {{loginCliente1.response.body.data}}
 
-### 12. Cliente 1 crea su Solicitud (tendrá ID 1 - solicitudPropiaId)
+### 12. Cliente 1 contrata su Membresía pendiente (tendrá ID 1 - membresiaPropiaId)
+# @name contratarCliente1
+POST {{baseUrl}}/membresias
+Authorization: Bearer {{tokenCliente1}}
+Content-Type: application/json
+
+{
+  "clienteId": 1,
+  "planId": 1
+}
+
+### 13. Cliente 1 registra el pago (201; monto tomado del plan)
+# @name crearPagoCliente1
+POST {{baseUrl}}/pagos
+Authorization: Bearer {{tokenCliente1}}
+Content-Type: application/json
+
+{
+  "membresiaId": {{contratarCliente1.response.body.data.id}},
+  "metodoPago": "transferencia",
+  "fechaLimitePago": "{{contratarCliente1.response.body.data.fechaInicio}}"
+}
+
+### 14. Cliente 1 confirma el pago y activa su membresía (200)
+PATCH {{baseUrl}}/pagos/{{contratarCliente1.response.body.data.id}}/{{crearPagoCliente1.response.body.data.idPago}}/confirmar
+Authorization: Bearer {{tokenCliente1}}
+
+### 15. Cliente 1 crea su Solicitud con membresía vigente (tendrá ID 1 - solicitudPropiaId)
 POST {{baseUrl}}/solicitudes
 Authorization: Bearer {{tokenCliente1}}
 Content-Type: application/json
@@ -182,30 +209,47 @@ Content-Type: application/json
   "lesionesPrevias": "Ninguna"
 }
 
-### 13. Cliente 1 contrata su Membresía (tendrá ID 1 - membresiaPropiaId)
-POST {{baseUrl}}/membresias
-Authorization: Bearer {{tokenCliente1}}
-Content-Type: application/json
-
-{
-  "clienteId": 1,
-  "planId": 1
-}
-
-### 14. Login como Cliente 2 (Ana, ID 3)
+### 16. Login como Cliente 2 (Ana, ID 3)
 # @name loginCliente2
 POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
   "email": "ana@mail.com",
-  "contrasenia": "clave123"
+  "contrasenia": "clave12345"
 }
 
 ### Guardar Token de Cliente 2
 @tokenCliente2 = {{loginCliente2.response.body.data}}
 
-### 15. Cliente 2 crea su Solicitud (tendrá ID 2 - solicitudAjenaId)
+### 17. Cliente 2 contrata su Membresía pendiente (tendrá ID 2 - membresiaAjenaId)
+# @name contratarCliente2
+POST {{baseUrl}}/membresias
+Authorization: Bearer {{tokenCliente2}}
+Content-Type: application/json
+
+{
+  "clienteId": 3,
+  "planId": 1
+}
+
+### 18. Cliente 2 registra el pago (201; monto tomado del plan)
+# @name crearPagoCliente2
+POST {{baseUrl}}/pagos
+Authorization: Bearer {{tokenCliente2}}
+Content-Type: application/json
+
+{
+  "membresiaId": {{contratarCliente2.response.body.data.id}},
+  "metodoPago": "efectivo",
+  "fechaLimitePago": "{{contratarCliente2.response.body.data.fechaInicio}}"
+}
+
+### 19. Cliente 2 confirma el pago y activa su membresía (200)
+PATCH {{baseUrl}}/pagos/{{contratarCliente2.response.body.data.id}}/{{crearPagoCliente2.response.body.data.idPago}}/confirmar
+Authorization: Bearer {{tokenCliente2}}
+
+### 20. Cliente 2 crea su Solicitud con membresía vigente (tendrá ID 2 - solicitudAjenaId)
 POST {{baseUrl}}/solicitudes
 Authorization: Bearer {{tokenCliente2}}
 Content-Type: application/json
@@ -219,35 +263,25 @@ Content-Type: application/json
   "lesionesPrevias": "Ninguna"
 }
 
-### 16. Cliente 2 contrata su Membresía (tendrá ID 2 - membresiaAjenaId)
-POST {{baseUrl}}/membresias
-Authorization: Bearer {{tokenCliente2}}
-Content-Type: application/json
-
-{
-  "clienteId": 3,
-  "planId": 1
-}
-
 
 # ------------------------------------------------------------------------------
 # FASE 4: CLASES Y RUTINAS (ENTRENADOR 1 Y ENTRENADOR 2)
 # ------------------------------------------------------------------------------
 
-### 17. Login como Entrenador 1 (Carlos, ID 4)
+### 21. Login como Entrenador 1 (Carlos, ID 4)
 # @name loginEntrenador1
 POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
   "email": "carlos.entrenador@mail.com",
-  "contrasenia": "clave123"
+  "contrasenia": "clave12345"
 }
 
 ### Guardar Token de Entrenador 1
 @tokenEntrenador1 = {{loginEntrenador1.response.body.data}}
 
-### 18. Entrenador 1 crea su Clase (tendrá ID 1)
+### 22. Entrenador 1 crea su Clase (tendrá ID 1)
 POST {{baseUrl}}/clases
 Authorization: Bearer {{tokenEntrenador1}}
 Content-Type: application/json
@@ -261,7 +295,7 @@ Content-Type: application/json
   "entrenadorId": 4
 }
 
-### 19. Entrenador 1 crea su Rutina para la Solicitud 1 (tendrá ID 1)
+### 23. Entrenador 1 crea su Rutina para la Solicitud 1 (201; la solicitud queda aprobada)
 POST {{baseUrl}}/rutinas
 Authorization: Bearer {{tokenEntrenador1}}
 Content-Type: application/json
@@ -273,20 +307,20 @@ Content-Type: application/json
   "entrenadorId": 4
 }
 
-### 20. Login como Entrenador 2 (Luis, ID 5 - Entrenador Ajeno)
+### 24. Login como Entrenador 2 (Luis, ID 5 - Entrenador Ajeno)
 # @name loginEntrenador2
 POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
   "email": "luis.entrenador@mail.com",
-  "contrasenia": "clave123"
+  "contrasenia": "clave12345"
 }
 
 ### Guardar Token de Entrenador 2
 @tokenEntrenador2 = {{loginEntrenador2.response.body.data}}
 
-### 21. Entrenador 2 crea su Clase (tendrá ID 2 - claseAjenaId para Carlos)
+### 25. Entrenador 2 crea su Clase (tendrá ID 2 - claseAjenaId para Carlos)
 POST {{baseUrl}}/clases
 Authorization: Bearer {{tokenEntrenador2}}
 Content-Type: application/json
@@ -300,7 +334,7 @@ Content-Type: application/json
   "entrenadorId": 5
 }
 
-### 22. Entrenador 2 crea su Rutina para la Solicitud 2 (tendrá ID 2 - rutinaAjenaId)
+### 26. Entrenador 2 crea su Rutina para la Solicitud 2 (201; la solicitud queda aprobada)
 POST {{baseUrl}}/rutinas
 Authorization: Bearer {{tokenEntrenador2}}
 Content-Type: application/json

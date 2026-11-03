@@ -3,6 +3,7 @@ import { orm } from '../shared/db/orm.js';
 import { leerId, manejarError, hoyISO } from '../shared/utils.js';
 import { Usuario, RolUsuario } from '../usuario/usuario.entity.js';
 import { Solicitud, EstadoSolicitud } from './solicitud.entity.js';
+import { Membresia, EstadoMembresia } from '../membresia/membresia.entity.js';
 
 const em = orm.em;
 
@@ -58,6 +59,15 @@ function sanitizeSolicitudInput(
     errores.push('El clienteId debe ser un número entero positivo');
   }
 
+  // El cliente siempre crea la solicitud pendiente; el estado se gestiona al actualizar.
+  if (
+    req.method !== 'POST' &&
+    body.estado !== undefined &&
+    !Object.values(EstadoSolicitud).includes(body.estado)
+  ) {
+    errores.push('El estado debe ser pendiente, aprobada o rechazada');
+  }
+
   const lesiones = body.lesionesPrevias;
 
   if (
@@ -91,6 +101,10 @@ function sanitizeSolicitudInput(
 
   if (body.clienteId !== undefined) {
     datosLimpios.clienteId = body.clienteId;
+  }
+
+  if (req.method !== 'POST' && body.estado !== undefined) {
+    datosLimpios.estado = body.estado;
   }
 
   if (lesiones !== undefined) {
@@ -191,6 +205,17 @@ async function add(req: Request, res: Response) {
       });
     }
 
+    const membresiaVigente = await em.findOne(Membresia, {
+      cliente,
+      estadoMembresia: EstadoMembresia.ACTIVA,
+      fechaFin: { $gte: hoyISO() },
+    });
+    if (!membresiaVigente) {
+      return res.status(400).json({
+        message: 'El cliente necesita una membresía activa y vigente para solicitar una rutina',
+      });
+    }
+
     const solicitud = em.create(Solicitud, {
       peso: datos.peso,
       masaMuscular: datos.masaMuscular,
@@ -249,6 +274,10 @@ async function update(req: Request, res: Response) {
 
     if (datos.objetivo !== undefined) {
       solicitud.objetivo = datos.objetivo;
+    }
+
+    if (datos.estado !== undefined) {
+      solicitud.estado = datos.estado;
     }
 
     if (datos.lesionesPrevias !== undefined) {

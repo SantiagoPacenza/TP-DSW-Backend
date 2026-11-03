@@ -11,7 +11,7 @@ export enum EstadoInscripcion {
 }
 @Entity()
 export class Inscripcion {
-  // PK: cliente + clase + fechaInscripcion
+  // PK: cliente + clase. Si se vuelve a inscribir, se reactiva la misma fila.
 
   // Relación: Muchas inscripciones pertenecen a 1 solo Cliente (obligatorio)
   @ManyToOne(() => 'Usuario', {
@@ -21,20 +21,19 @@ export class Inscripcion {
   })
   cliente!: Usuario;
 
+  // deleteRule: 'restric' evita que se borre una clase si tiene inscripciones activas.
   // Relación: Muchas inscripciones pertenecen a 1 sola Clase (obligatorio)
   @ManyToOne(() => 'Clase', {
     primary: true,
     nullable: false,
-    deleteRule: 'cascade',
+    deleteRule: 'restrict',
   })
   clase!: Clase;
 
-  // deleteRule: 'cascade' para que al borrar una Clase o un Usuario se borren sus inscripciones asociadas.
-
   // fechaInscripcion manejado como string plano 'YYYY-MM-DD': evita problemas de zona horaria.
-  @Property({ primary: true, type: 'date', nullable: false })
+  @Property({ type: 'date', nullable: false })
   fechaInscripcion!: string;
 
   @Enum(() => EstadoInscripcion)
-  estadoInscripcion!: EstadoInscripcion;
+  estadoInscripcion: EstadoInscripcion = EstadoInscripcion.ACTIVA;
 }

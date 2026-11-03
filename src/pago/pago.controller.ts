@@ -16,13 +16,9 @@ async function findAll(req: Request, res: Response) {
         ? { membresia: { cliente: usuarioAutenticado.id } }
         : {};
 
-    const pagos = await em.find(
-      Pago,
-      filtro,
-      {
-        populate: ['membresia'],
-      },
-    );
+    const pagos = await em.find(Pago, filtro, {
+      populate: ['membresia'],
+    });
 
     res.status(200).json({
       message: 'Pagos encontrados',
@@ -82,11 +78,9 @@ async function findOne(req: Request, res: Response) {
 // Crear un pago
 async function add(req: Request, res: Response) {
   try {
-    const datos = req.body.sanitizedInput as Record<string, unknown>;
+    const datos = req.body.sanitizedInput;
 
-    const membresiaId = datos.membresiaId as number;
-    const membresia = await em.findOne(Membresia, { id: membresiaId });
-
+    const membresia = await em.findOne(Membresia, { id: datos.membresiaId });
     if (!membresia) {
       return res.status(404).json({
         message: 'La membresía asociada no existe',
@@ -99,21 +93,21 @@ async function add(req: Request, res: Response) {
       membresia.cliente.id !== usuarioAutenticado.id
     ) {
       return res.status(403).json({
-        message: 'No tenés permiso para registrar pagos en una membresía de otro cliente.',
+        message:
+          'No tenés permiso para registrar pagos en una membresía de otro cliente.',
       });
     }
 
     if (membresia.estadoMembresia === EstadoMembresia.CANCELADA) {
       return res.status(400).json({
-        message: 'Error de validación',
-        errores: ['No se pueden registrar pagos para una membresía cancelada.'],
+        message: 'No se pueden registrar pagos para una membresía cancelada',
       });
     }
 
     // Obtener el último número de pago de esa membresía.
     const ultimoPago = await em.find(
       Pago,
-      { membresia: membresia },
+      { membresia },
       { orderBy: { idPago: 'DESC' }, limit: 1 },
     );
 
@@ -121,16 +115,16 @@ async function add(req: Request, res: Response) {
 
     const pago = em.create(Pago, {
       idPago,
-      monto: datos.monto as string,
-      metodoPago: datos.metodoPago as string,
-      fechaLimitePago: datos.fechaLimitePago as string,
+      monto: datos.monto,
+      metodoPago: datos.metodoPago,
+      fechaLimitePago: datos.fechaLimitePago,
       fechaPago: null,
       membresia,
     });
 
     await em.flush();
 
-    res.status(201).json({
+    return res.status(201).json({
       message: 'Pago creado',
       data: pago,
     });
@@ -228,6 +222,13 @@ async function update(req: Request, res: Response) {
       return res.status(404).json({ message: 'Pago no encontrado' });
     }
 
+    if (pago.fechaPago) {
+      return res.status(409).json({
+        message:
+          'No se puede modificar ni eliminar un pago que ya fue confirmado',
+      });
+    }
+
     const datos = req.body.sanitizedInput as Record<string, unknown>;
 
     // La membresía y el idPago identifican al pago y no se modifican.
@@ -267,6 +268,13 @@ async function remove(req: Request, res: Response) {
 
     if (!pago) {
       return res.status(404).json({ message: 'Pago no encontrado' });
+    }
+
+    if (pago.fechaPago) {
+      return res.status(409).json({
+        message:
+          'No se puede modificar ni eliminar un pago que ya fue confirmado',
+      });
     }
 
     await em.remove(pago).flush();
@@ -334,11 +342,10 @@ function sanitizePagoInput(req: Request, res: Response, next: NextFunction) {
 
   //validar que el usuario no haya mandado una fecha arbitria en el JSON
   if (body.fechaPago !== undefined) {
-  errores.push(
-    'La fecha de pago se registra únicamente al confirmar el pago',
-  );
-}
-
+    errores.push(
+      'La fecha de pago se registra únicamente al confirmar el pago',
+    );
+  }
 
   if (errores.length > 0) {
     return res.status(400).json({
@@ -352,7 +359,7 @@ function sanitizePagoInput(req: Request, res: Response, next: NextFunction) {
   if (esPost) datosLimpios.membresiaId = body.membresiaId;
 
   if (body.monto !== undefined) {
-    datosLimpios.monto = String(body.monto);
+    datosLimpios.monto = body.monto.toFixed(2);
   }
 
   if (body.metodoPago !== undefined) {
@@ -373,4 +380,12 @@ function sanitizePagoInput(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-export { findAll, findOne, add, update, remove, confirmarPago, sanitizePagoInput };
+export {
+  findAll,
+  findOne,
+  add,
+  update,
+  remove,
+  confirmarPago,
+  sanitizePagoInput,
+};

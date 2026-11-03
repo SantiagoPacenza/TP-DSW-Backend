@@ -117,34 +117,13 @@ function sanitizeEjercicioRutinaInput(
 }
 
 // Obtener los renglones, ordenados por día y orden de ejecución.
-// Filtro opcional por rutina: GET /api/ejercicios-rutina?rutinaId=3
 async function findAll(req: Request, res: Response) {
   try {
-    const rutinaIdQuery = req.query.rutinaId;
-    let filtro = {};
-
-    if (rutinaIdQuery !== undefined) {
-      const rutinaId = Number(rutinaIdQuery);
-      if (
-        typeof rutinaIdQuery !== 'string' ||
-        !/^\d+$/.test(rutinaIdQuery) ||
-        !Number.isSafeInteger(rutinaId) ||
-        rutinaId <= 0
-      ) {
-        return res.status(400).json({
-          message: 'El rutinaId debe ser un número entero válido',
-        });
-      }
-
-      const rutina = await em.findOne(Rutina, { id: rutinaId });
-      if (!rutina) {
-        return res.status(404).json({
-          message: 'Rutina no encontrada',
-        });
-      }
-
-      filtro = { rutina };
-    }
+    const usuarioAutenticado = (req as any).usuario;
+    const filtro =
+      usuarioAutenticado.rol === RolUsuario.CLIENTE
+        ? { rutina: { solicitud: { cliente: usuarioAutenticado.id } } }
+        : {};
 
     const renglones = await em.find(EjercicioRutina, filtro, {
       populate: ['ejercicio'],
@@ -168,12 +147,22 @@ async function findOne(req: Request, res: Response) {
     const renglon = await em.findOne(
       EjercicioRutina,
       { id },
-      { populate: ['ejercicio'] },
+      { populate: ['ejercicio', 'rutina.solicitud'] },
     );
 
     if (!renglon) {
       return res.status(404).json({
         message: 'Ejercicio de rutina no encontrado',
+      });
+    }
+
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.CLIENTE &&
+      renglon.rutina.solicitud.cliente.id !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para consultar ejercicios de otro cliente.',
       });
     }
 
@@ -203,7 +192,8 @@ async function add(req: Request, res: Response) {
       rutina.entrenador.id !== usuarioAutenticado.id
     ) {
       return res.status(403).json({
-        message: 'No tenés permiso para agregar ejercicios a una rutina de otro entrenador.',
+        message:
+          'No tenés permiso para agregar ejercicios a una rutina de otro entrenador.',
       });
     }
 
@@ -258,7 +248,8 @@ async function update(req: Request, res: Response) {
       renglon.rutina.entrenador.id !== usuarioAutenticado.id
     ) {
       return res.status(403).json({
-        message: 'No tenés permiso para modificar ejercicios de una rutina de otro entrenador.',
+        message:
+          'No tenés permiso para modificar ejercicios de una rutina de otro entrenador.',
       });
     }
 
@@ -331,7 +322,8 @@ async function remove(req: Request, res: Response) {
       renglon.rutina.entrenador.id !== usuarioAutenticado.id
     ) {
       return res.status(403).json({
-        message: 'No tenés permiso para quitar ejercicios de una rutina de otro entrenador.',
+        message:
+          'No tenés permiso para quitar ejercicios de una rutina de otro entrenador.',
       });
     }
 

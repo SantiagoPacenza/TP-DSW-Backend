@@ -1,5 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
-import { leerId, manejarError } from '../shared/utils.js';
+import {
+  leerId,
+  manejarError,
+  hoyISO,
+  esFechaValida,
+} from '../shared/utils.js';
 import bcrypt from 'bcryptjs';
 import { orm } from '../shared/db/orm.js';
 import { Usuario, RolUsuario } from './usuario.entity.js';
@@ -60,20 +65,13 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
     }
   } else if (
     typeof body.fechaNacimiento !== 'string' ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(body.fechaNacimiento)
+    !esFechaValida(body.fechaNacimiento)
   ) {
-    errores.push('La fecha de nacimiento debe tener el formato AAAA-MM-DD');
-  } else {
-    const fecha = new Date(body.fechaNacimiento);
-
-    if (
-      isNaN(fecha.getTime()) ||
-      fecha.toISOString().slice(0, 10) !== body.fechaNacimiento
-    ) {
-      errores.push('La fecha de nacimiento no es una fecha válida');
-    } else if (fecha > new Date()) {
-      errores.push('La fecha de nacimiento no puede ser en el futuro');
-    }
+    errores.push(
+      'La fecha de nacimiento debe ser válida y tener formato AAAA-MM-DD',
+    );
+  } else if (body.fechaNacimiento > hoyISO()) {
+    errores.push('La fecha de nacimiento no puede ser en el futuro');
   }
 
   if (body.contrasenia === undefined) {
@@ -86,7 +84,7 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
     errores.push('La contraseña debe tener al menos 8 caracteres');
   } else if (body.contrasenia.length > 72) {
     errores.push('La contraseña no puede tener más de 72 caracteres');
-  } 
+  }
   /*Agregué este último porque el algoritmo de bcrypt tiene un limite de 72byte
   Si se supera, puede ignorar parte de la contraseña y provocar que dos contraseñas 
   diferentes se consideren equivalentes
@@ -112,9 +110,9 @@ function sanitizeUsuarioInput(req: Request, res: Response, next: NextFunction) {
     email: body.email?.trim().toLowerCase(),
     contrasenia: body.contrasenia,
     telefono:
-    typeof body.telefono === 'string'
-      ? body.telefono.trim() || null
-      : body.telefono,
+      typeof body.telefono === 'string'
+        ? body.telefono.trim() || null
+        : body.telefono,
   };
 
   // Agregar contraseña solo si vino en el body (en PUT/PATCH, si se actualizan otros datos no viene y es undefined)
@@ -238,7 +236,6 @@ async function update(req: Request, res: Response) {
   }
 }
 
-
 async function actualizarDisciplinas(req: Request, res: Response) {
   try {
     const id = leerId(req, res);
@@ -251,9 +248,7 @@ async function actualizarDisciplinas(req: Request, res: Response) {
       !Array.isArray(disciplinaIds) ||
       !disciplinaIds.every(
         (id: unknown) =>
-          typeof id === 'number' &&
-          Number.isInteger(id) &&
-          id > 0,
+          typeof id === 'number' && Number.isInteger(id) && id > 0,
       ) ||
       new Set(disciplinaIds).size !== disciplinaIds.length
     ) {
@@ -310,7 +305,6 @@ async function actualizarDisciplinas(req: Request, res: Response) {
   }
 }
 
-
 // Se busca antes de borrar para poder responder 404 si no existe (getReference no avisa)
 async function remove(req: Request, res: Response) {
   try {
@@ -343,4 +337,12 @@ async function remove(req: Request, res: Response) {
   }
 }
 
-export { sanitizeUsuarioInput, findAll, findOne, add, update, remove, actualizarDisciplinas };
+export {
+  sanitizeUsuarioInput,
+  findAll,
+  findOne,
+  add,
+  update,
+  remove,
+  actualizarDisciplinas,
+};

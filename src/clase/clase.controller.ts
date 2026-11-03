@@ -7,6 +7,34 @@ import { Disciplina } from '../disciplina/disciplina.entity.js';
 
 const em = orm.em;
 
+// En PATCH se pasan los valores finales, combinando los nuevos con los actuales.
+async function validarHorario(
+  entrenadorId: number,
+  diaSemana: DiaSemana,
+  horaInicio: string,
+  horaFin: string,
+  claseId?: number,
+) {
+  if (horaFin <= horaInicio) {
+    return 'La hora de fin debe ser posterior a la hora de inicio';
+  }
+
+  const clasesDelDia = await em.find(Clase, {
+    entrenador: entrenadorId,
+    diaSemana,
+  });
+  const seSuperpone = clasesDelDia.some(
+    (clase) =>
+      clase.id !== claseId &&
+      horaInicio < clase.horaFin &&
+      horaFin > clase.horaInicio,
+  );
+
+  return seSuperpone
+    ? 'El entrenador ya tiene otra clase en ese horario'
+    : null;
+}
+
 async function findAll(req: Request, res: Response) {
   try {
     const clases = await em.find(Clase, {});
@@ -41,7 +69,8 @@ async function add(req: Request, res: Response) {
       datosLimpios.entrenadorId !== usuarioAutenticado.id
     ) {
       return res.status(403).json({
-        message: 'No tenés permiso para crear una clase a nombre de otro entrenador.',
+        message:
+          'No tenés permiso para crear una clase a nombre de otro entrenador.',
       });
     }
 
@@ -50,7 +79,9 @@ async function add(req: Request, res: Response) {
       id: datosLimpios.entrenadorId,
     });
     if (!entrenadorEntity) {
-      return res.status(404).json({ message: 'El Entrenador asociado no existe' });
+      return res
+        .status(404)
+        .json({ message: 'El Entrenador asociado no existe' });
     }
 
     // ¡VALIDACIÓN DE ROL! Aseguramos que solo un usuario con rol 'entrenador' pueda asociarse con una clase
@@ -82,6 +113,17 @@ async function add(req: Request, res: Response) {
           'El entrenador no está habilitado para dictar esa disciplina.',
         ],
       });
+    }
+
+    // LLama a validarHorario antes de crear la clase. Si hay conflictos de horario, devuelve 409.
+    const errorHorario = await validarHorario(
+      datosLimpios.entrenadorId,
+      datosLimpios.diaSemana,
+      datosLimpios.horaInicio,
+      datosLimpios.horaFin,
+    );
+    if (errorHorario) {
+      return res.status(409).json({ message: errorHorario });
     }
 
     datosLimpios.disciplina = disciplinaEntity;
@@ -117,7 +159,8 @@ async function update(req: Request, res: Response) {
     if (usuarioAutenticado.rol === RolUsuario.ENTRENADOR) {
       if (clase.entrenador.id !== usuarioAutenticado.id) {
         return res.status(403).json({
-          message: 'No tenés permiso para modificar una clase de otro entrenador.',
+          message:
+            'No tenés permiso para modificar una clase de otro entrenador.',
         });
       }
       if (
@@ -125,7 +168,8 @@ async function update(req: Request, res: Response) {
         datosLimpios.entrenadorId !== usuarioAutenticado.id
       ) {
         return res.status(403).json({
-          message: 'No tenés permiso para reasignar la clase a otro entrenador.',
+          message:
+            'No tenés permiso para reasignar la clase a otro entrenador.',
         });
       }
     }
@@ -197,6 +241,17 @@ async function update(req: Request, res: Response) {
       }
     }
 
+    const errorHorario = await validarHorario(
+      entrenadorFinal.id!,
+      datosLimpios.diaSemana ?? clase.diaSemana,
+      datosLimpios.horaInicio ?? clase.horaInicio,
+      datosLimpios.horaFin ?? clase.horaFin,
+      clase.id,
+    );
+    if (errorHorario) {
+      return res.status(409).json({ message: errorHorario });
+    }
+
     em.assign(clase, datosLimpios);
     await em.flush();
     res.status(200).json({ message: 'Clase actualizada', data: clase });
@@ -228,7 +283,11 @@ async function remove(req: Request, res: Response) {
     await em.remove(clase).flush();
     res.status(200).json({ message: 'Clase eliminada' });
   } catch (error) {
-    manejarError(res, error, { req });
+    manejarError(res, error, {
+      mensajeForeignKey:
+        'No se puede eliminar la clase porque tiene inscripciones asociadas',
+      req,
+    });
   }
 }
 
@@ -249,13 +308,8 @@ function sanitizeClaseInput(req: Request, res: Response, next: NextFunction) {
   if (cupos === undefined) {
     if (req.method !== 'PATCH')
       errores.push('El número de cupos es obligatorio');
-  } else if (
-    typeof cupos !== 'number' ||
-    isNaN(cupos) ||
-    !Number.isInteger(cupos) ||
-    cupos <= 0
-  ) {
-    errores.push('El número de cupos debe ser un número entero válido');
+  } else if (!Number.isInteger(cupos) || cupos <= 0 || cupos > 200) {
+    errores.push('El número de cupos debe ser un entero entre 1 y 200');
   }
 
   // Validar 'diaSemana' (debe ser un valor del enum DiaSemana)
@@ -274,7 +328,7 @@ function sanitizeClaseInput(req: Request, res: Response, next: NextFunction) {
       errores.push('La hora de inicio es obligatoria');
   } else if (
     typeof body.horaInicio !== 'string' ||
-    !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(body.horaInicio)
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(body.horaInicio)
   ) {
     errores.push('La hora de inicio debe tener el formato HH:mm');
   }
@@ -284,7 +338,7 @@ function sanitizeClaseInput(req: Request, res: Response, next: NextFunction) {
     if (req.method !== 'PATCH') errores.push('La hora de fin es obligatoria');
   } else if (
     typeof body.horaFin !== 'string' ||
-    !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(body.horaFin)
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(body.horaFin)
   ) {
     errores.push('La hora de fin debe tener el formato HH:mm');
   }

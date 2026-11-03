@@ -1,7 +1,7 @@
 # Ejecutar en orden. Completar credenciales e IDs con datos de prueba existentes.
 # clienteId debe corresponder al cliente del login.
 # Las solicitudes y membresias "Propia" son de ese cliente; las "Ajena", de otro.
-# La clase y la rutina ajenas deben pertenecer a OTRO entrenador.
+# La clase y la rutina ajenas deben pertenecer a OTRO entrenador (y a otra solicitud).
 # Se necesitan dos clientes y dos entrenadores. Este archivo no crea datos de preparacion.
 
 @url = http://localhost:3000/api
@@ -13,6 +13,7 @@
 @claveEntrenador = clave123
 @clienteId = 1
 @otroClienteId = 3
+@entrenadorAjenoId = 5
 @solicitudPropiaId = 1
 @solicitudAjenaId = 2
 @membresiaPropiaId = 1
@@ -112,22 +113,31 @@ Content-Type: application/json
 GET {{url}}/membresias/{{membresiaAjenaId}}
 Authorization: Bearer {{cliente}}
 
-### 16. Entrenador modifica una clase ajena (403)
+### 16. Cliente consulta una rutina ajena (403)
+GET {{url}}/rutinas/{{rutinaAjenaId}}
+Authorization: Bearer {{cliente}}
+
+### 17. Entrenador modifica una clase ajena (403)
 PATCH {{url}}/clases/{{claseAjenaId}}
 Authorization: Bearer {{entrenador}}
 Content-Type: application/json
 
 { "cupos": 20 }
 
-### 17. Entrenador modifica una rutina ajena (403)
+### 18. Entrenador intenta crear una rutina a nombre de otro entrenador (403)
+POST {{url}}/rutinas
+Authorization: Bearer {{entrenador}}
+Content-Type: application/json
+
+{ "nombre": "Rutina Ajena", "descripcion": "No permitida", "solicitudId": {{solicitudPropiaId}}, "entrenadorId": {{entrenadorAjenoId}} }
+
+### 19. Entrenador modifica una rutina ajena (403)
 PATCH {{url}}/rutinas/{{rutinaAjenaId}}
 Authorization: Bearer {{entrenador}}
 Content-Type: application/json
 
 { "descripcion": "Cambio no permitido" }
 
-### 18. Admin lista usuarios (200)
+### 20. Admin lista usuarios (200)
 GET {{url}}/usuarios
 Authorization: Bearer {{admin}}
-
-

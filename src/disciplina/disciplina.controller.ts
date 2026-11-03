@@ -39,14 +39,22 @@ function sanitizeDisciplinaInput(
     input.nombre.trim() === ''
   ) {
     errores.push('El nombre debe ser un texto que no esté vacío');
+  } else if (input.nombre.trim().length > 80) {
+    errores.push('El nombre no puede superar los 80 caracteres');
   }
 
-  // Descripción opcional, pero debe ser texto si se envía.
+  // null o texto vacío permiten borrar la descripción.
   if (
     input.descripcion !== undefined &&
+    input.descripcion !== null &&
     typeof input.descripcion !== 'string'
   ) {
     errores.push('La descripción debe ser un texto');
+  } else if (
+    typeof input.descripcion === 'string' &&
+    input.descripcion.trim().length > 255
+  ) {
+    errores.push('La descripción no puede superar los 255 caracteres');
   }
 
   // Devuelve todos los errores detectados.
@@ -66,7 +74,9 @@ function sanitizeDisciplinaInput(
 
   if (input.descripcion !== undefined) {
     datosLimpios.descripcion =
-      (input.descripcion as string).trim();
+      input.descripcion === null
+        ? null
+        : (input.descripcion as string).trim() || null;
   }
 
   // No permite una actualización sin datos.

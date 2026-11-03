@@ -23,10 +23,10 @@ export class Clase extends BaseEntity {
   @Enum(() => DiaSemana)
   diaSemana!: DiaSemana;
 
-  @Property({ type: 'string', length: 10, nullable: false })
+  @Property({ type: 'string', length: 5, nullable: false })
   horaInicio!: string;                                          // Manejado como string plano 'HH:mm': evita errores
 
-  @Property({ type: 'string', length: 10, nullable: false })
+  @Property({ type: 'string', length: 5, nullable: false })
   horaFin!: string;                                             // Manejado como string plano 'HH:mm': evita errores
 
   // Relación: 1 Clase puede tener N Inscripciones

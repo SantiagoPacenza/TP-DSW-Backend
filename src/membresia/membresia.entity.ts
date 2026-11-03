@@ -5,23 +5,23 @@ import type { Plan } from '../plan/plan.entity.js';
 
 export enum EstadoMembresia {
   ACTIVA = 'activa',
-  INACTIVA = 'inactiva',
+  VENCIDA = 'vencida',
   CANCELADA = 'cancelada'
 }
 
 @Entity()
 export class Membresia extends BaseEntity {
   
-  // fechaInicio y fechaRegistro manejado como string plano 'YYYY-MM-DD': evita problemas de zona horaria.
+  // Fechas generadas por el servidor a partir de la duración del plan.
 
-  @Property({ type: 'date', nullable: true })
-  fechaInicio?: string;
+  @Property({ type: 'date', nullable: false })
+  fechaInicio!: string;
 
-  @Property({ type: 'date', nullable: true })
-  fechaFin?: string;
+  @Property({ type: 'date', nullable: false })
+  fechaFin!: string;
 
   @Enum(() => EstadoMembresia)
-  estadoMembresia!: EstadoMembresia;
+  estadoMembresia: EstadoMembresia = EstadoMembresia.ACTIVA;
 
   // Relación: Muchas membresías pertenecen a 1 solo Cliente (obligatorio)
   @ManyToOne(() => 'Usuario', { nullable: false })

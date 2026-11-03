@@ -15,10 +15,13 @@ export class Plan extends BaseEntity {
   incluyeClasesGrupales: boolean = false;
 
   @Property({ type: 'int' })
-  duracionEnMeses!: string;
+  duracionEnMeses!: number;
 
   @Property({ type: 'string', length: 255 })
   descripcion!: string;
+
+  @Property({ type: 'boolean', default: true })
+  activo: boolean = true;
 
   // Relación: 1 Plan puede tener N Membresías (tipamos explícitamente el parámetro)
   @OneToMany(() => 'Membresia', (membresia: Membresia) => membresia.plan)

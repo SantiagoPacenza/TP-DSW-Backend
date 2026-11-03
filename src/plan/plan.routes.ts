@@ -9,6 +9,7 @@ import {
 } from './plan.controller.js';
 import { verificarToken, isAdmin } from '../auth/auth.middleware.js';
 
+
 export const planRouter = Router();
 
 planRouter.get('/', findAll);

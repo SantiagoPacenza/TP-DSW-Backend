@@ -1,9 +1,13 @@
 @baseUrl = http://localhost:3000/api
-@url = http://localhost:3000/api/inscripciones
+@url = {{baseUrl}}/inscripciones
+@clienteId = 1
+@claseId = 1
 
-### ==========================================
-### PASO 0: LOGIN AUTOMÁTICO (Hacer clic en "Send Request" aquí una sola vez)
-### ==========================================
+# Requiere un cliente con membresía vigente que incluya clases grupales,
+# una clase con cupos y sin inscripción previa para este cliente.
+# Ejecutar en orden. El login debe ser de un administrador para probar la finalización.
+
+### 0. Login de administrador
 # @name loginRequest
 POST {{baseUrl}}/login
 Content-Type: application/json
@@ -13,145 +17,48 @@ Content-Type: application/json
   "contrasenia": "passwordSeguro123"
 }
 
-### Extraemos automáticamente el token de la respuesta del bloque anterior
 @token = {{loginRequest.response.body.data}}
 
-### 1. Listar (esperado: 200)
-GET {{url}}
-Authorization: Bearer {{token}}
-
-### 2. Crear una inscripción (esperado: 201)
+### 1. Inscribirse sin enviar fecha ni estado (201; estado activa y fecha de hoy)
 # @name crear
 POST {{url}}
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "clienteId": 1,
-  "claseId": 1,
-  "estadoInscripcion": "activa"
+  "clienteId": {{clienteId}},
+  "claseId": {{claseId}}
 }
 
-### Variables dinámicas para las peticiones con clave compuesta
-# Nota: Como la fecha se genera automáticamente en el POST (YYYY-MM-DD),
-# reemplaza @fechaInscripcion por la fecha del día en que ejecutes la prueba (ej: 2026-10-30)
-@clienteId = 1
-@claseId = 1
-@fechaInscripcion = 2026-10-30
+@fechaInscripcion = {{crear.response.body.data.fechaInscripcion}}
 
-### 3. Ver la creada usando clave compuesta en la URL (esperado: 200)
+### 2. Consultar la inscripción creada (200)
 GET {{url}}/{{clienteId}}/{{claseId}}/{{fechaInscripcion}}
 Authorization: Bearer {{token}}
 
-### 4. Crear sin clienteId (esperado: 400)
-# errores: ["El ID de cliente es obligatorio"]
+### 3. Cancelar: elimina la inscripción y libera el cupo (200)
+DELETE {{url}}/{{clienteId}}/{{claseId}}/{{fechaInscripcion}}
+Authorization: Bearer {{token}}
+
+### 4. Confirmar que ya no existe (404)
+GET {{url}}/{{clienteId}}/{{claseId}}/{{fechaInscripcion}}
+Authorization: Bearer {{token}}
+
+### 5. Volver a inscribirse: se crea una nueva y se repiten las validaciones (201; activa)
+# @name reinscribir
 POST {{url}}
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "claseId": 1,
-  "estadoInscripcion": "activa"
+  "clienteId": {{clienteId}},
+  "claseId": {{claseId}}
 }
 
-### 5. Crear sin claseId (esperado: 400)
-# errores: ["El ID de clase es obligatorio"]
-POST {{url}}
-Authorization: Bearer {{token}}
-Content-Type: application/json
+@fechaNueva = {{reinscribir.response.body.data.fechaInscripcion}}
 
-{
-  "clienteId": 1,
-  "estadoInscripcion": "activa"
-}
-
-### 6. Crear con estado de inscripción inválido (esperado: 400)
-# errores: ["El estado de la inscripción debe ser uno de: activa, finalizada, cancelada"]
-POST {{url}}
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "clienteId": 1,
-  "claseId": 1,
-  "estadoInscripcion": "pendiente"
-}
-
-### 7. Crear con usuario que no es cliente (esperado: 400)
-# errores: ["Solo los usuarios con rol de cliente pueden inscribirse a las clases."]
-POST {{url}}
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "clienteId": 2,
-  "claseId": 1,
-  "estadoInscripcion": "activa"
-}
-
-### 8. Crear con cliente que no existe (esperado: 404)
-# "El Cliente asociado no existe"
-POST {{url}}
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "clienteId": 99999,
-  "claseId": 1,
-  "estadoInscripcion": "activa"
-}
-
-### 9. Crear con clase que no existe (esperado: 404)
-# "La Clase asociada no existe"
-POST {{url}}
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "clienteId": 1,
-  "claseId": 99999,
-  "estadoInscripcion": "activa"
-}
-
-### 10. Crear segunda inscripción para pruebas adicionales (esperado: 201)
-# @name crearExtra
-POST {{url}}
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "clienteId": 3,
-  "claseId": 1,
-  "estadoInscripcion": "activa"
-}
-
-@clienteIdExtra = 3
-@claseIdExtra = 1
-@fechaInscripcionExtra = 2026-10-30
-
-### 11. Parámetros de ruta con formato inválido (esperado: 400)
-GET {{url}}/abc/def/2026-10-30
-Authorization: Bearer {{token}}
-
-### 12. Inscripción que no existe en la ruta compuesta (esperado: 404)
-# "Inscripción no encontrada"
-GET {{url}}/99999/99999/2026-10-30
-Authorization: Bearer {{token}}
-
-### 13. PUT completo de la inscripción (esperado: 200)
-PUT {{url}}/{{clienteId}}/{{claseId}}/{{fechaInscripcion}}
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "clienteId": 1,
-  "claseId": 1,
-  "estadoInscripcion": "finalizada",
-  "fechaInscripcion": "2026-10-30"
-}
-
-### 14. PATCH para cambiar solo el estado (esperado: 200)
-PATCH {{url}}/{{clienteId}}/{{claseId}}/{{fechaInscripcion}}
+### 6. PATCH no permite cancelar mediante estado (400; debe usarse DELETE)
+PATCH {{url}}/{{clienteId}}/{{claseId}}/{{fechaNueva}}
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -159,28 +66,36 @@ Content-Type: application/json
   "estadoInscripcion": "cancelada"
 }
 
-### 15. PATCH sin datos para modificar (esperado: 400)
-# "No hay datos para modificar"
-PATCH {{url}}/{{clienteId}}/{{claseId}}/{{fechaInscripcion}}
+### 7. El administrador puede finalizar la inscripción (200; finalizada)
+PATCH {{url}}/{{clienteId}}/{{claseId}}/{{fechaNueva}}
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{}
+{
+  "estadoInscripcion": "finalizada"
+}
 
-### 16. Eliminar la primera inscripción (esperado: 200)
-# "Inscripción eliminada"
-DELETE {{url}}/{{clienteId}}/{{claseId}}/{{fechaInscripcion}}
+### 8. PATCH no permite reactivar la inscripción (400)
+PATCH {{url}}/{{clienteId}}/{{claseId}}/{{fechaNueva}}
 Authorization: Bearer {{token}}
+Content-Type: application/json
 
-### 17. Ver la eliminada (esperado: 404)
-# "Inscripción no encontrada"
-GET {{url}}/{{clienteId}}/{{claseId}}/{{fechaInscripcion}}
+{
+  "estadoInscripcion": "activa"
+}
+
+### 9. PUT tampoco permite reactivar la inscripción (400)
+PUT {{url}}/{{clienteId}}/{{claseId}}/{{fechaNueva}}
 Authorization: Bearer {{token}}
+Content-Type: application/json
 
-### 18. Eliminar la segunda inscripción (esperado: 200)
-DELETE {{url}}/{{clienteIdExtra}}/{{claseIdExtra}}/{{fechaInscripcionExtra}}
-Authorization: Bearer {{token}}
+{
+  "clienteId": {{clienteId}},
+  "claseId": {{claseId}},
+  "fechaInscripcion": "{{fechaNueva}}",
+  "estadoInscripcion": "activa"
+}
 
-### 19. Listar para confirmar que quedó vacía (esperado: 200 y data vacío)
-GET {{url}}
+### 10. Eliminar la inscripción de prueba (200)
+DELETE {{url}}/{{clienteId}}/{{claseId}}/{{fechaNueva}}
 Authorization: Bearer {{token}}

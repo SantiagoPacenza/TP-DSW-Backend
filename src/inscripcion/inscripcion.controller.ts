@@ -180,16 +180,6 @@ async function update(req: Request, res: Response) {
 
     const datosLimpios = req.body.sanitizedInput;
 
-    const usuarioAutenticado = (req as any).usuario;
-    if (usuarioAutenticado.rol === RolUsuario.CLIENTE) {
-      if (claveCompuesta.clienteId !== usuarioAutenticado.id) {
-        return res.status(403).json({
-          message:
-            'No tenés permiso para modificar una inscripción de otro cliente.',
-        });
-      }
-    }
-
     const inscripcion = await em.findOne(Inscripcion, {
       cliente: claveCompuesta.clienteId,
       clase: claveCompuesta.claseId,
@@ -215,33 +205,8 @@ async function update(req: Request, res: Response) {
       });
     }
 
-    // Solo se cuentan cupos si pasa de cancelada/finalizada a activa.
-    if (
-      datosLimpios.estadoInscripcion === EstadoInscripcion.ACTIVA &&
-      inscripcion.estadoInscripcion !== EstadoInscripcion.ACTIVA
-    ) {
-      const claseEntity = await em.findOne(Clase, {
-        id: claveCompuesta.claseId,
-      });
-      if (claseEntity) {
-        const inscriptosActuales = await em.count(Inscripcion, {
-          clase: claseEntity,
-          estadoInscripcion: EstadoInscripcion.ACTIVA,
-        });
-        if (inscriptosActuales >= claseEntity.cupos) {
-          return res.status(400).json({
-            message: 'Error de validación',
-            errores: [
-              'No hay cupos disponibles para reactivar la inscripción en esta clase.',
-            ],
-          });
-        }
-      }
-    }
-
-    if (datosLimpios.estadoInscripcion !== undefined) {
-      inscripcion.estadoInscripcion = datosLimpios.estadoInscripcion;
-    }
+    // PUT/PATCH solo permiten finalizar; para cancelar se usa DELETE.
+    inscripcion.estadoInscripcion = EstadoInscripcion.FINALIZADA;
 
     await em.flush();
     res
@@ -282,7 +247,7 @@ async function remove(req: Request, res: Response) {
     }
 
     await em.remove(inscripcion).flush();
-    res.status(200).json({ message: 'Inscripción eliminada' });
+    res.status(200).json({ message: 'Inscripción cancelada y eliminada' });
   } catch (error) {
     manejarError(res, error, { req });
   }
@@ -325,15 +290,12 @@ function sanitizeInscripcionInput(
     errores.push('El ID de clase debe ser un número entero válido');
   }
 
-  // Al crear siempre nace activa. En PUT/PATCH se valida el estado recibido.
+  // Al crear siempre nace activa. Solo el administrador puede finalizarla.
   if (req.method !== 'POST') {
-    if (body.estadoInscripcion === undefined) {
-      if (req.method === 'PUT')
-        errores.push('El estado de la inscripción es obligatorio');
-    } else if (
-      !Object.values(EstadoInscripcion).includes(body.estadoInscripcion)
-    ) {
-      errores.push('El estado debe ser activa, finalizada o cancelada');
+    if (body.estadoInscripcion !== EstadoInscripcion.FINALIZADA) {
+      errores.push(
+        'Solo se puede cambiar el estado a finalizada. Para cancelar usá DELETE; para inscribirte nuevamente usá POST',
+      );
     }
   }
 

@@ -2,16 +2,14 @@ import { Entity, Enum, Property, ManyToOne } from '@mikro-orm/core';
 import type { Usuario } from '../usuario/usuario.entity.js';
 import type { Clase } from '../clase/clase.entity.js';
 
-// Una inscripción está activa desde que el usuario cliente se inscribe hasta que terminan las clases de la disciplina
-// a la que se asiste. Luego pasa a ser finalizada.
+// Al inscribirse nace activa. El administrador puede finalizarla; al cancelar se elimina.
 export enum EstadoInscripcion {
   ACTIVA = 'activa',
   FINALIZADA = 'finalizada',
-  CANCELADA = 'cancelada',
 }
 @Entity()
 export class Inscripcion {
-  // PK: cliente + clase. Si se vuelve a inscribir, se reactiva la misma fila.
+  // PK: cliente + clase. Tras cancelar se puede crear una nueva inscripción.
 
   // Relación: Muchas inscripciones pertenecen a 1 solo Cliente (obligatorio)
   @ManyToOne(() => 'Usuario', {
@@ -21,7 +19,7 @@ export class Inscripcion {
   })
   cliente!: Usuario;
 
-  // deleteRule: 'restric' evita que se borre una clase si tiene inscripciones activas.
+  // restrict evita que se borre una clase si tiene inscripciones asociadas.
   // Relación: Muchas inscripciones pertenecen a 1 sola Clase (obligatorio)
   @ManyToOne(() => 'Clase', {
     primary: true,

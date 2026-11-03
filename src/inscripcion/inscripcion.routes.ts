@@ -7,13 +7,13 @@ import {
   update,
   remove,
 } from './inscripcion.controller.js';
-import { verificarToken, isAdminCliente } from '../auth/auth.middleware.js';
+import { verificarToken, isAdmin, isAdminCliente } from '../auth/auth.middleware.js';
 
 export const inscripcionRouter = Router();
 
 inscripcionRouter.get('/', verificarToken, findAll);
 inscripcionRouter.get('/:clienteId/:claseId/:fechaInscripcion', verificarToken, findOne);
 inscripcionRouter.post('/', verificarToken, isAdminCliente, sanitizeInscripcionInput, add);
-inscripcionRouter.put('/:clienteId/:claseId/:fechaInscripcion', verificarToken, isAdminCliente, sanitizeInscripcionInput, update);
-inscripcionRouter.patch('/:clienteId/:claseId/:fechaInscripcion', verificarToken, isAdminCliente, sanitizeInscripcionInput, update);
+inscripcionRouter.put('/:clienteId/:claseId/:fechaInscripcion', verificarToken, isAdmin, sanitizeInscripcionInput, update);
+inscripcionRouter.patch('/:clienteId/:claseId/:fechaInscripcion', verificarToken, isAdmin, sanitizeInscripcionInput, update);
 inscripcionRouter.delete('/:clienteId/:claseId/:fechaInscripcion', verificarToken, isAdminCliente, remove);

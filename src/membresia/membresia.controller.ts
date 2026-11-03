@@ -84,10 +84,15 @@ async function add(req: Request, res: Response) {
       });
     }
 
-    // 3. Verificar que el Plan relacionado exista
+    // 3. Verificar que el Plan relacionado exista y esté activo
     const plan = await em.findOne(Plan, { id: datos.planId });
     if (!plan) {
       return res.status(404).json({ message: 'El Plan asociado no existe' });
+    }
+    if (!plan.activo) {
+      return res.status(400).json({
+        message: 'No se puede contratar una membresía con un plan inactivo',
+      });
     }
 
     // 4. Verificar que el cliente no tenga ya una membresía activa vigente
@@ -152,6 +157,11 @@ async function update(req: Request, res: Response) {
       const plan = await em.findOne(Plan, { id: datos.planId });
       if (!plan) {
         return res.status(404).json({ message: 'El Plan asociado no existe' });
+      }
+      if (!plan.activo) {
+        return res.status(400).json({
+          message: 'No se puede asociar una membresía a un plan inactivo',
+        });
       }
       datos.plan = plan;
       delete datos.planId;

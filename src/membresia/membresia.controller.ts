@@ -95,19 +95,21 @@ async function add(req: Request, res: Response) {
       });
     }
 
-    // 4. Verificar que el cliente no tenga ya una membresía activa vigente
-    const activas = await em.count(Membresia, {
+    // 4. Verificar que el cliente no tenga ya una membresía activa o pendiente vigente
+    const vigentes = await em.count(Membresia, {
       cliente,
-      estadoMembresia: EstadoMembresia.ACTIVA,
+      estadoMembresia: {
+        $in: [EstadoMembresia.ACTIVA, EstadoMembresia.PENDIENTE],
+      },
       fechaFin: { $gte: hoyISO() },
     });
-    if (activas > 0) {
+    if (vigentes > 0) {
       return res.status(409).json({
-        message: 'El cliente ya tiene una membresía activa vigente',
+        message: 'El cliente ya tiene una membresía activa o pendiente de pago',
       });
     }
 
-    // 5. Calcular fechas a partir del plan y crear la membresía
+    // 5. Calcular fechas a partir del plan y crear la membresía en estado pendiente de pago
     const fechaInicio = hoyISO();
     const fechaFin = sumarMeses(fechaInicio, Number(plan.duracionEnMeses));
     const membresia = em.create(Membresia, {
@@ -115,7 +117,7 @@ async function add(req: Request, res: Response) {
       plan,
       fechaInicio,
       fechaFin,
-      estadoMembresia: EstadoMembresia.ACTIVA,
+      estadoMembresia: EstadoMembresia.PENDIENTE,
     });
     await em.flush();
 
@@ -134,37 +136,60 @@ async function update(req: Request, res: Response) {
     if (id === null) return;
     const datos = req.body.sanitizedInput;
 
-    const membresia = await em.findOne(Membresia, { id });
+    const membresia = await em.findOne(
+      Membresia,
+      { id },
+      { populate: ['cliente', 'plan'] },
+    );
     if (!membresia) {
       return res.status(404).json({ message: 'Membresia no encontrada' });
     }
 
-    if (datos.clienteId !== undefined) {
-      const cliente = await em.findOne(Usuario, { id: datos.clienteId });
-      if (!cliente) {
-        return res.status(404).json({ message: 'El Cliente asociado no existe' });
-      }
-      if (cliente.rol !== RolUsuario.CLIENTE) {
-        return res.status(400).json({
-          message: 'Solo los usuarios con rol de cliente pueden contratar membresías',
+    const usuarioAutenticado = (req as any).usuario;
+    if (usuarioAutenticado.rol === RolUsuario.CLIENTE) {
+      if (membresia.cliente.id !== usuarioAutenticado.id) {
+        return res.status(403).json({
+          message:
+            'No tenés permiso para modificar una membresía de otro cliente.',
         });
       }
-      datos.cliente = cliente;
+      if (
+        datos.estadoMembresia !== EstadoMembresia.CANCELADA ||
+        datos.fechaInicio !== undefined ||
+        datos.fechaFin !== undefined
+      ) {
+        return res.status(403).json({
+          message: 'El cliente solo puede cancelar su propia membresía.',
+        });
+      }
+    }
+
+    if (datos.clienteId !== undefined) {
+      if (datos.clienteId !== membresia.cliente.id) {
+        return res.status(409).json({
+          message: 'El cliente de una membresía no se puede modificar',
+        });
+      }
       delete datos.clienteId;
     }
 
     if (datos.planId !== undefined) {
-      const plan = await em.findOne(Plan, { id: datos.planId });
-      if (!plan) {
-        return res.status(404).json({ message: 'El Plan asociado no existe' });
-      }
-      if (!plan.activo) {
-        return res.status(400).json({
-          message: 'No se puede asociar una membresía a un plan inactivo',
+      if (datos.planId !== membresia.plan.id) {
+        return res.status(409).json({
+          message:
+            'El plan de una membresía no se puede modificar. Cancele la membresía actual y contrate una nueva.',
         });
       }
-      datos.plan = plan;
       delete datos.planId;
+    }
+
+    if (
+      datos.estadoMembresia === EstadoMembresia.ACTIVA &&
+      membresia.estadoMembresia !== EstadoMembresia.ACTIVA
+    ) {
+      return res.status(409).json({
+        message: 'La membresía solo se puede activar al confirmar su pago',
+      });
     }
 
     const fechaInicio = datos.fechaInicio ?? membresia.fechaInicio;
@@ -234,7 +259,7 @@ function sanitizeMembresiaInput(req: Request, res: Response, next: NextFunction)
     if (body.estadoMembresia === undefined) {
       if (req.method === 'PUT') errores.push('El estado de la membresía es obligatorio');
     } else if (!Object.values(EstadoMembresia).includes(body.estadoMembresia)) {
-      errores.push('El estado debe ser activa, vencida o cancelada');
+      errores.push('El estado debe ser pendiente, activa, vencida o cancelada');
     }
   }
 

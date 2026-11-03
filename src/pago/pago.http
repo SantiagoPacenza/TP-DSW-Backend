@@ -30,7 +30,7 @@ Authorization: Bearer {{token}}
 GET {{url}}/{{membresiaId}}/1
 Authorization: Bearer {{token}}
 
-### 3. Crear un pago para una membresía existente
+### 3. Crear un pago para una membresía existente (201; monto tomado del plan)
 # @name crearPago
 POST {{url}}
 Authorization: Bearer {{token}}
@@ -38,19 +38,17 @@ Content-Type: application/json
 
 {
   "membresiaId": {{membresiaId}},
-  "monto": 25000,
   "metodoPago": "transferencia",
   "fechaLimitePago": "2026-11-10"
 }
 
-### 4. Crear un pago con datos inválidos (esperado: 400)
+### 4. Crear un pago con método y fecha inválidos (esperado: 400)
 POST {{url}}
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
   "membresiaId": {{membresiaId}},
-  "monto": -100,
   "metodoPago": "",
   "fechaLimitePago": "2026-02-30"
 }
@@ -62,7 +60,6 @@ Content-Type: application/json
 
 {
   "membresiaId": 99999,
-  "monto": 25000,
   "metodoPago": "efectivo",
   "fechaLimitePago": "2026-11-10"
 }

@@ -1,6 +1,11 @@
 import type { Request, Response, NextFunction } from 'express';
 import { orm } from '../shared/db/orm.js';
-import { manejarError, esFechaValida, hoyISO } from '../shared/utils.js';
+import {
+  manejarError,
+  esFechaValida,
+  hoyISO,
+  sumarMeses,
+} from '../shared/utils.js';
 import { Membresia, EstadoMembresia } from '../membresia/membresia.entity.js';
 import { RolUsuario } from '../usuario/usuario.entity.js';
 import { Pago } from './pago.entity.js';
@@ -80,7 +85,11 @@ async function add(req: Request, res: Response) {
   try {
     const datos = req.body.sanitizedInput;
 
-    const membresia = await em.findOne(Membresia, { id: datos.membresiaId });
+    const membresia = await em.findOne(
+      Membresia,
+      { id: datos.membresiaId },
+      { populate: ['plan'] },
+    );
     if (!membresia) {
       return res.status(404).json({
         message: 'La membresía asociada no existe',
@@ -115,7 +124,7 @@ async function add(req: Request, res: Response) {
 
     const pago = em.create(Pago, {
       idPago,
-      monto: datos.monto,
+      monto: membresia.plan.precio,
       metodoPago: datos.metodoPago,
       fechaLimitePago: datos.fechaLimitePago,
       fechaPago: null,
@@ -160,7 +169,7 @@ async function confirmarPago(req: Request, res: Response) {
         idPago,
         membresia: { id: membresiaId },
       },
-      { populate: ['membresia'] },
+      { populate: ['membresia', 'membresia.plan'] },
     );
 
     if (!pago) {
@@ -177,13 +186,30 @@ async function confirmarPago(req: Request, res: Response) {
       });
     }
 
+    if (pago.membresia.estadoMembresia === EstadoMembresia.CANCELADA) {
+      return res.status(409).json({
+        message: 'No se puede confirmar un pago de una membresía cancelada',
+      });
+    }
+
     if (pago.fechaPago) {
       return res.status(409).json({
         message: 'El pago ya fue confirmado',
       });
     }
 
-    pago.fechaPago = hoyISO();
+    const hoy = hoyISO();
+    pago.fechaPago = hoy;
+
+    // Al confirmar el pago, se habilita la membresía y su vigencia corre desde hoy
+    if (pago.membresia.estadoMembresia === EstadoMembresia.PENDIENTE) {
+      pago.membresia.estadoMembresia = EstadoMembresia.ACTIVA;
+      pago.membresia.fechaInicio = hoy;
+      pago.membresia.fechaFin = sumarMeses(
+        hoy,
+        Number(pago.membresia.plan.duracionEnMeses),
+      );
+    }
 
     await orm.em.flush();
 
@@ -308,15 +334,18 @@ function sanitizePagoInput(req: Request, res: Response, next: NextFunction) {
     errores.push('No se puede cambiar la membresía de un pago');
   }
 
-  // Validar monto
-  if (body.monto === undefined) {
-    if (!esPatch) errores.push('El monto es obligatorio');
-  } else if (
-    typeof body.monto !== 'number' ||
-    !Number.isFinite(body.monto) ||
-    body.monto <= 0
-  ) {
-    errores.push('El monto debe ser un número mayor que cero');
+  // Al crear, el monto se obtiene del plan. Solo se recibe al actualizar.
+  if (!esPost) {
+    if (body.monto === undefined) {
+      if (!esPatch) errores.push('El monto es obligatorio');
+    } else if (
+      typeof body.monto !== 'number' ||
+      !Number.isFinite(body.monto) ||
+      body.monto <= 0 ||
+      body.monto > 99999999.99
+    ) {
+      errores.push('El monto debe ser un número mayor que cero');
+    }
   }
 
   // Validar método de pago
@@ -358,7 +387,7 @@ function sanitizePagoInput(req: Request, res: Response, next: NextFunction) {
 
   if (esPost) datosLimpios.membresiaId = body.membresiaId;
 
-  if (body.monto !== undefined) {
+  if (!esPost && body.monto !== undefined) {
     datosLimpios.monto = body.monto.toFixed(2);
   }
 

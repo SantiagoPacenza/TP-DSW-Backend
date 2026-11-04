@@ -50,7 +50,6 @@ export async function registrarErrorDesdeFrontend(req: Request, res: Response) {
     const { mensaje, stackTrace, tipoError } = req.body ?? {};
 
     if (typeof mensaje !== 'string' || mensaje.trim() === '') {
-      console.error('El mensaje de error es obligatorio.');
       return res.status(400).json({
         message: 'El mensaje de error es obligatorio y debe ser un texto',
       });
@@ -93,7 +92,6 @@ export async function registrarErrorDesdeFrontend(req: Request, res: Response) {
       });
     }
 
-    console.log('Error de frontend registrado con éxito.');
     return res
       .status(201)
       .json({ message: 'Error de frontend registrado con éxito.' });

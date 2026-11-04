@@ -19,5 +19,5 @@ membresiaRouter.get('/', verificarToken, findAll);
 membresiaRouter.get('/:id', verificarToken, findOne);
 membresiaRouter.post('/', verificarToken, isAdminCliente, sanitizeMembresiaInput, add);
 membresiaRouter.put('/:id', verificarToken, isAdmin, sanitizeMembresiaInput, update);
-membresiaRouter.patch('/:id', verificarToken, isAdmin, sanitizeMembresiaInput, update);
+membresiaRouter.patch('/:id', verificarToken, isAdminCliente, sanitizeMembresiaInput, update);
 membresiaRouter.delete('/:id', verificarToken, isAdmin, remove);

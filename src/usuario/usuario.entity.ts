@@ -28,23 +28,23 @@ export class Usuario extends BaseEntity {
   @Property({ length: 30, nullable: false })
   nombre!: string;
 
-  @Property({ nullable: false })
+  @Property({ length: 30, nullable: false })
   apellido!: string;
 
   @Property({ type: 'date' })
   fechaNacimiento!: string;
 
-  @Property({ unique: true })
+  @Property({ length: 30, unique: true })
   nombreUsuario!: string;
 
-  @Property({ length:100, unique: true })
+  @Property({ length: 100, unique: true })
   email!: string;
 
   @Property({ hidden: true })
   contrasenia!: string;
 
-  @Property({ nullable: true })
-  telefono?: string;
+  @Property({ type: 'string', length: 25, nullable: true })
+  telefono?: string | null;
 
   // Relación: 1 Usuario (con rol cliente) puede tener N Membresías (tipamos explícitamente el parámetro)
   @OneToMany(() => 'Membresia', (membresia: Membresia) => membresia.cliente)

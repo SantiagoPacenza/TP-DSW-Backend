@@ -19,6 +19,20 @@ Content-Type: application/json
 ### 1. Listar (esperado: 200)
 GET {{url}}
 
+### 1.1. Filtrar por disciplina (esperado: 200; solo clases de la disciplina 1)
+# Tanto el listado como el detalle incluyen disciplina, entrenador y cuposDisponibles.
+# Los cupos disponibles descuentan únicamente las inscripciones activas.
+GET {{url}}?disciplinaId=1
+
+### 1.1.b. Filtrar por alias disciplina (esperado: 200)
+GET {{url}}?disciplina=1
+
+### 1.2. Disciplina inexistente (esperado: 200 y data vacío)
+GET {{url}}?disciplinaId=99999
+
+### 1.3. Filtro inválido (esperado: 400)
+GET {{url}}?disciplinaId=abc
+
 ### 2. Crear una clase (esperado: 201)
 # @name crear
 POST {{url}}

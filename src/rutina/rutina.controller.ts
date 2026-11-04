@@ -3,6 +3,7 @@ import { leerId, manejarError } from '../shared/utils.js';
 import { orm } from '../shared/db/orm.js';
 import { Rutina, EstadoRutina } from './rutina.entity.js';
 import { Usuario, RolUsuario } from '../usuario/usuario.entity.js';
+import { Solicitud, EstadoSolicitud } from '../solicitud/solicitud.entity.js';
 
 const em = orm.em;
 
@@ -64,6 +65,13 @@ function sanitizeRutinaInput(req: Request, res: Response, next: NextFunction) {
     errores.push('El Id del entrenador debe ser un número entero válido');
   }
 
+  if (body.solicitudId === undefined) {
+    if (req.method === 'POST')
+      errores.push('El Id de la solicitud es obligatorio');
+  } else if (!Number.isSafeInteger(body.solicitudId) || body.solicitudId <= 0) {
+    errores.push('El Id de la solicitud debe ser un número entero positivo');
+  }
+
   if (errores.length > 0) {
     return res.status(400).json({
       message: 'Datos inválidos',
@@ -79,6 +87,8 @@ function sanitizeRutinaInput(req: Request, res: Response, next: NextFunction) {
   if (body.estado !== undefined) datosLimpios.estado = body.estado;
   if (body.entrenadorId !== undefined)
     datosLimpios.entrenadorId = body.entrenadorId;
+  if (body.solicitudId !== undefined)
+    datosLimpios.solicitudId = body.solicitudId;
 
   if (Object.keys(datosLimpios).length === 0) {
     return res.status(400).json({
@@ -93,7 +103,15 @@ function sanitizeRutinaInput(req: Request, res: Response, next: NextFunction) {
 // Obtener todas las rutinas
 async function findAll(req: Request, res: Response) {
   try {
-    const rutinas = await em.find(Rutina, {}, { populate: ['entrenador'] });
+    const usuarioAutenticado = (req as any).usuario;
+    // Si el usuario es cliente, solo puede ver sus propias rutinas
+    const filtro =
+      usuarioAutenticado.rol === RolUsuario.CLIENTE
+        ? { solicitud: { cliente: usuarioAutenticado.id } }
+        : {};
+    const rutinas = await em.find(Rutina, filtro, {
+      populate: ['entrenador', 'solicitud'],
+    });
 
     res.status(200).json({
       message: 'Rutinas encontradas',
@@ -113,12 +131,22 @@ async function findOne(req: Request, res: Response) {
     const rutina = await em.findOne(
       Rutina,
       { id },
-      { populate: ['entrenador'] },
+      { populate: ['entrenador', 'solicitud', 'ejerciciosRutina'] },
     );
 
     if (!rutina) {
       return res.status(404).json({
         message: 'Rutina no encontrada',
+      });
+    }
+
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.CLIENTE &&
+      rutina.solicitud.cliente.id !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message: 'No tenés permiso para consultar una rutina de otro cliente.',
       });
     }
 
@@ -142,7 +170,8 @@ async function add(req: Request, res: Response) {
       datosLimpios.entrenadorId !== usuarioAutenticado.id
     ) {
       return res.status(403).json({
-        message: 'No tenés permiso para crear una rutina a nombre de otro entrenador.',
+        message:
+          'No tenés permiso para crear una rutina a nombre de otro entrenador.',
       });
     }
 
@@ -167,17 +196,30 @@ async function add(req: Request, res: Response) {
       });
     }
 
+    const solicitud = await em.findOne(Solicitud, {
+      id: datosLimpios.solicitudId,
+    });
+    if (!solicitud) {
+      return res.status(404).json({ message: 'Solicitud no encontrada' });
+    }
+
+    datosLimpios.solicitud = solicitud;
+    delete datosLimpios.solicitudId;
     datosLimpios.entrenador = entrenador;
     delete datosLimpios.entrenadorId; // Eliminamos entrenadorId ya que no es un campo de la entidad Rutina
 
     const rutina = em.create(Rutina, datosLimpios);
+    solicitud.estado = EstadoSolicitud.APROBADA;
     await em.flush();
     res.status(201).json({
       message: 'Rutina creada',
       data: rutina,
     });
   } catch (error) {
-    manejarError(res, error, { req });
+    manejarError(res, error, {
+      mensajeDuplicado: 'Esta solicitud ya tiene una rutina asignada',
+      req,
+    });
   }
 }
 
@@ -201,7 +243,8 @@ async function update(req: Request, res: Response) {
       rutina.entrenador.id !== usuarioAutenticado.id
     ) {
       return res.status(403).json({
-        message: 'No tenés permiso para modificar una rutina de otro entrenador.',
+        message:
+          'No tenés permiso para modificar una rutina de otro entrenador.',
       });
     }
 
@@ -216,6 +259,15 @@ async function update(req: Request, res: Response) {
         });
       }
       delete datosLimpios.entrenadorId;
+    }
+
+    if (datosLimpios.solicitudId !== undefined) {
+      if (datosLimpios.solicitudId !== rutina.solicitud.id) {
+        return res.status(409).json({
+          message: 'La solicitud de una rutina no se puede modificar',
+        });
+      }
+      delete datosLimpios.solicitudId;
     }
 
     em.assign(rutina, datosLimpios);
@@ -249,7 +301,8 @@ async function remove(req: Request, res: Response) {
       rutina.entrenador.id !== usuarioAutenticado.id
     ) {
       return res.status(403).json({
-        message: 'No tenés permiso para eliminar una rutina de otro entrenador.',
+        message:
+          'No tenés permiso para eliminar una rutina de otro entrenador.',
       });
     }
 

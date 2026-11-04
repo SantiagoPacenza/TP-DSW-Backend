@@ -14,20 +14,20 @@ export class Solicitud extends BaseEntity {
   @Property({ type: 'date', nullable: false })
   fechaSolicitud!: string;
 
-  @Property({ nullable: false })
+  @Property({ type: 'double', nullable: false })
   peso!: number;
 
-  @Property({ nullable: false })
+  @Property({ type: 'double', nullable: false })
   masaMuscular!: number;
 
-  @Property({ nullable: false })
+  @Property({ type: 'double', nullable: false })
   altura!: number;
 
-  @Property({ nullable: false })
+  @Property({ length: 200, nullable: false })
   objetivo!: string;
 
-  @Property({ nullable: true })
-  lesionesPrevias?: string;
+  @Property({ type: 'string', length: 500, nullable: true })
+  lesionesPrevias?: string | null;
 
   @Enum(() => EstadoSolicitud)
   estado: EstadoSolicitud = EstadoSolicitud.PENDIENTE;

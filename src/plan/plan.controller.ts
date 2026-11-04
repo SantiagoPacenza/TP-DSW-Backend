@@ -9,12 +9,8 @@ const em = orm.em;
 
 async function findAll(req: Request, res: Response) {
   try {
-    const rol = (req as any).usuario?.rol;
-
-    const filtro: FilterQuery<Plan> =
-      rol === RolUsuario.CLIENTE
-        ? { activo: true }
-        : {};
+    const esAdmin = (req as any).usuario?.rol === RolUsuario.ADMIN;
+    const filtro: FilterQuery<Plan> = esAdmin ? {} : { activo: true };
 
     const planes = await em.find(Plan, filtro);
 
@@ -32,12 +28,8 @@ async function findOne(req: Request, res: Response) {
     const id = leerId(req, res);
     if (id === null) return;
 
-    const rol = (req as any).usuario?.rol;
-
-    const filtro =
-      rol === RolUsuario.CLIENTE
-        ? { id, activo: true }
-        : { id };
+    const esAdmin = (req as any).usuario?.rol === RolUsuario.ADMIN;
+    const filtro: FilterQuery<Plan> = esAdmin ? { id } : { id, activo: true };
 
     const plan = await em.findOne(Plan, filtro);
 
@@ -80,12 +72,11 @@ async function update(req: Request, res: Response) {
     if (!plan) {
       return res.status(404).json({ message: 'Plan no encontrado.' });
     }
-    
+
     const datos = req.body.sanitizedInput;
     em.assign(plan, datos);
     await em.flush();
     res.status(200).json({ message: 'Plan actualizado', data: plan });
-  
   } catch (error) {
     manejarError(res, error, {
       mensajeDuplicado: 'Ya existe un plan con ese nombre',
@@ -99,11 +90,7 @@ async function remove(req: Request, res: Response) {
     const id = leerId(req, res);
     if (id === null) return;
 
-    const plan = await em.findOne(
-      Plan,
-      { id },
-      { populate: ['membresias'] },
-    );
+    const plan = await em.findOne(Plan, { id }, { populate: ['membresias'] });
 
     if (!plan) {
       return res.status(404).json({
@@ -124,7 +111,11 @@ async function remove(req: Request, res: Response) {
       message: 'Plan eliminado',
     });
   } catch (error) {
-    manejarError(res, error, { req });
+    manejarError(res, error, {
+      mensajeForeignKey:
+        'No se puede eliminar el plan porque tiene membresías asociadas.',
+      req,
+    });
   }
 }
 
@@ -133,15 +124,11 @@ function sanitizePlanInput(req: Request, res: Response, next: NextFunction) {
   const errores: string[] = [];
   const maxCaracteres: Record<string, number> = {
     nombre: 80,
-    descripcion: 255
+    descripcion: 255,
   };
 
   // El cuerpo debe ser un objeto.
-  if (
-    typeof body !== 'object' ||
-    body === null ||
-    Array.isArray(body)
-  ) {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
     return res.status(400).json({
       message: 'Datos inválidos',
       errores: ['El cuerpo debe ser un objeto'],
@@ -152,11 +139,10 @@ function sanitizePlanInput(req: Request, res: Response, next: NextFunction) {
   for (const campo of Object.keys(maxCaracteres)) {
     const valor = body[campo];
     if (valor === undefined) {
-      if (req.method !== 'PATCH') errores.push(`El campo ${campo} es obligatorio`);
-
+      if (req.method !== 'PATCH')
+        errores.push(`El campo ${campo} es obligatorio`);
     } else if (typeof valor !== 'string' || valor.trim() === '') {
       errores.push(`El campo ${campo} debe ser un texto que no esté vacío`);
-      
     } else if (valor.trim().length > maxCaracteres[campo]) {
       errores.push(
         `El campo ${campo} no puede tener más de ${maxCaracteres[campo]} caracteres`,
@@ -166,21 +152,19 @@ function sanitizePlanInput(req: Request, res: Response, next: NextFunction) {
 
   // 2. Validar 'precio' (decimal)
   const precio = body.precio;
-  if (precio !== undefined) {
-    if (
-      typeof precio !== 'number' || //rechaza textos, etc
-      !Number.isFinite(precio) || //que no sea infinito (1e999 puede convertirse en Infinity)
-      precio < 0 || //no negativos
-      precio > 99999999.99  //Evita superar la col de MySQL
-    ) {
-      errores.push(
-        'El precio debe ser un número entre 0 y 99999999.99'
-      );
-    } else if (
-      Math.abs(precio * 100 - Math.round(precio * 100)) > 1e-6  //Detecta más de 2 decimales
-    ) {
-      errores.push('El precio no puede tener más de 2 decimales');
+  if (precio === undefined) {
+    if (req.method !== 'PATCH') {
+      errores.push('El precio es obligatorio');
     }
+  } else if (
+    typeof precio !== 'number' ||
+    !Number.isFinite(precio) ||
+    precio < 0 ||
+    precio > 99999999.99
+  ) {
+    errores.push('El precio debe ser un número entre 0 y 99999999.99');
+  } else if (Number(precio.toFixed(2)) !== precio) {
+    errores.push('El precio no puede tener más de 2 decimales');
   }
 
   // 3. Validar 'duracionEnMeses' (entero)
@@ -197,17 +181,19 @@ function sanitizePlanInput(req: Request, res: Response, next: NextFunction) {
     duracion > 120
   ) {
     errores.push(
-    'La duración en meses debe ser un número entero entre 1 y 120',
+      'La duración en meses debe ser un número entero entre 1 y 120',
     );
   }
 
   // 4. Validar 'incluyeClasesGrupales' (booleano)
   const incluyeClases = body.incluyeClasesGrupales;
   if (incluyeClases === undefined) {
-    if (req.method !== 'PATCH') errores.push('El campo "Incluye clases grupales" es obligatorio');
-
+    if (req.method !== 'PATCH')
+      errores.push('El campo "Incluye clases grupales" es obligatorio');
   } else if (typeof incluyeClases !== 'boolean') {
-    errores.push('El campo Incluye Clases Grupales debe ser un booleano (true o false)');
+    errores.push(
+      'El campo Incluye Clases Grupales debe ser un booleano (true o false)',
+    );
   }
 
   const activo = body.activo;
@@ -219,18 +205,16 @@ function sanitizePlanInput(req: Request, res: Response, next: NextFunction) {
     return res.status(400).json({ message: 'Datos inválidos', errores });
   }
 
-
-
   // Construir objeto limpio convirtiendo tipos si es necesario para la BD
   const datosLimpios: Record<string, unknown> = {
     nombre: body.nombre?.trim(),
-    precio: body.precio !== undefined ? body.precio.toFixed(2) : undefined,  //toFixed convierte a texto con 2 decimales (toString no agrega decimales)
+    precio: body.precio !== undefined ? body.precio.toFixed(2) : undefined, //toFixed convierte a texto con 2 decimales (toString no agrega decimales)
     incluyeClasesGrupales: body.incluyeClasesGrupales,
     duracionEnMeses: body.duracionEnMeses,
     descripcion: body.descripcion?.trim(),
     activo: body.activo,
   };
-  
+
   Object.keys(datosLimpios).forEach((campo) => {
     if (datosLimpios[campo] === undefined) delete datosLimpios[campo];
   });

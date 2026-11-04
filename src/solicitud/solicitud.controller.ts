@@ -1,8 +1,9 @@
 import type { Request, Response, NextFunction } from 'express';
 import { orm } from '../shared/db/orm.js';
-import { leerId, manejarError } from '../shared/utils.js';
+import { leerId, manejarError, hoyISO } from '../shared/utils.js';
 import { Usuario, RolUsuario } from '../usuario/usuario.entity.js';
 import { Solicitud, EstadoSolicitud } from './solicitud.entity.js';
+import { Membresia, EstadoMembresia } from '../membresia/membresia.entity.js';
 
 const em = orm.em;
 
@@ -15,11 +16,7 @@ function sanitizeSolicitudInput(
   const errores: string[] = [];
   const esParcial = req.method === 'PATCH';
 
-  if (
-    typeof body !== 'object' ||
-    body === null ||
-    Array.isArray(body)
-  ) {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
     return res.status(400).json({
       message: 'Datos inválidos',
       errores: ['El cuerpo debe ser un objeto'],
@@ -48,24 +45,27 @@ function sanitizeSolicitudInput(
     if (!esParcial) {
       errores.push('El objetivo es obligatorio');
     }
-  } else if (
-    typeof body.objetivo !== 'string' ||
-    body.objetivo.trim() === ''
-  ) {
+  } else if (typeof body.objetivo !== 'string' || body.objetivo.trim() === '') {
     errores.push('El objetivo debe ser un texto que no esté vacío');
   } else if (body.objetivo.trim().length > 200) {
     errores.push('El objetivo no puede superar los 200 caracteres');
   }
 
   if (body.clienteId === undefined) {
-    if (!esParcial) {
+    if (req.method === 'POST') {
       errores.push('El clienteId es obligatorio');
     }
-  } else if (
-    !Number.isSafeInteger(body.clienteId) ||
-    body.clienteId <= 0
-  ) {
+  } else if (!Number.isSafeInteger(body.clienteId) || body.clienteId <= 0) {
     errores.push('El clienteId debe ser un número entero positivo');
+  }
+
+  // El cliente siempre crea la solicitud pendiente; el estado se gestiona al actualizar.
+  if (
+    req.method !== 'POST' &&
+    body.estado !== undefined &&
+    !Object.values(EstadoSolicitud).includes(body.estado)
+  ) {
+    errores.push('El estado debe ser pendiente, aprobada o rechazada');
   }
 
   const lesiones = body.lesionesPrevias;
@@ -76,13 +76,9 @@ function sanitizeSolicitudInput(
     typeof lesiones !== 'string'
   ) {
     errores.push('Las lesiones previas deben ser un texto');
-  } else if (
-    typeof lesiones === 'string' &&
-    lesiones.trim().length > 500
-  ) {
+  } else if (typeof lesiones === 'string' && lesiones.trim().length > 500) {
     errores.push('Las lesiones previas no pueden superar los 500 caracteres');
   }
-
 
   if (errores.length > 0) {
     return res.status(400).json({
@@ -107,11 +103,14 @@ function sanitizeSolicitudInput(
     datosLimpios.clienteId = body.clienteId;
   }
 
+  if (req.method !== 'POST' && body.estado !== undefined) {
+    datosLimpios.estado = body.estado;
+  }
+
   if (lesiones !== undefined) {
     datosLimpios.lesionesPrevias =
       typeof lesiones === 'string' ? lesiones.trim() : null;
   }
-
 
   if (Object.keys(datosLimpios).length === 0) {
     return res.status(400).json({
@@ -123,17 +122,50 @@ function sanitizeSolicitudInput(
   next();
 }
 
+// DTO para el listado y el detalle, sin exponer datos personales del cliente.
+function obtenerDatosSolicitud(solicitud: Solicitud) {
+  return {
+    id: solicitud.id,
+    fechaSolicitud: solicitud.fechaSolicitud,
+    peso: solicitud.peso,
+    masaMuscular: solicitud.masaMuscular,
+    altura: solicitud.altura,
+    objetivo: solicitud.objetivo,
+    lesionesPrevias: solicitud.lesionesPrevias,
+    estado: solicitud.estado,
+    cliente: {
+      id: solicitud.cliente.id,
+      nombre: solicitud.cliente.nombre,
+      apellido: solicitud.cliente.apellido,
+      email: solicitud.cliente.email,
+    },
+  };
+}
+
 async function findAll(req: Request, res: Response) {
   try {
-    const solicitudes = await em.find(
-      Solicitud,
-      {},
-      { populate: ['cliente'] },
-    );
+    let estado: any = req.query.estado;
+
+    if (estado !== undefined) {
+      estado = typeof estado === 'string' ? estado.trim().toLowerCase() : '';
+
+      if (!Object.values(EstadoSolicitud).includes(estado)) {
+        return res.status(400).json({
+          message: 'El estado debe ser pendiente, aprobada o rechazada',
+        });
+      }
+    }
+
+    const filtro = estado ? { estado } : {};
+    const solicitudes = await em.find(Solicitud, filtro, {
+      populate: ['cliente'],
+    });
+
+    const datos = solicitudes.map(obtenerDatosSolicitud);
 
     res.status(200).json({
       message: 'Solicitudes encontradas',
-      data: solicitudes,
+      data: datos,
     });
   } catch (error) {
     manejarError(res, error, { req });
@@ -163,13 +195,16 @@ async function findOne(req: Request, res: Response) {
       solicitud.cliente.id !== usuarioAutenticado.id
     ) {
       return res.status(403).json({
-        message: 'No tenés permiso para consultar una solicitud de otro cliente.',
+        message:
+          'No tenés permiso para consultar una solicitud de otro cliente.',
       });
     }
 
+    const datos = obtenerDatosSolicitud(solicitud);
+
     res.status(200).json({
       message: 'Solicitud encontrada',
-      data: solicitud,
+      data: datos,
     });
   } catch (error) {
     manejarError(res, error, { req });
@@ -178,8 +213,8 @@ async function findOne(req: Request, res: Response) {
 
 async function add(req: Request, res: Response) {
   try {
-    const datos = req.body.sanitizedInput as Record<string, unknown>;
-    const clienteId = datos.clienteId as number;
+    const datos = req.body.sanitizedInput;
+    const clienteId = datos.clienteId;
 
     const usuarioAutenticado = (req as any).usuario;
     if (
@@ -187,7 +222,8 @@ async function add(req: Request, res: Response) {
       clienteId !== usuarioAutenticado.id
     ) {
       return res.status(403).json({
-        message: 'No tenés permiso para crear una solicitud a nombre de otro cliente.',
+        message:
+          'No tenés permiso para crear una solicitud a nombre de otro cliente.',
       });
     }
 
@@ -202,24 +238,31 @@ async function add(req: Request, res: Response) {
     if (cliente.rol !== RolUsuario.CLIENTE) {
       return res.status(400).json({
         message: 'Error de validación',
-        errores: ['Solo los usuarios con rol de cliente pueden crear solicitudes.'],
+        errores: [
+          'Solo los usuarios con rol de cliente pueden crear solicitudes.',
+        ],
       });
     }
 
-    const hoy = new Date();
-    const fechaSolicitud = [
-      hoy.getFullYear(),
-      String(hoy.getMonth() + 1).padStart(2, '0'),
-      String(hoy.getDate()).padStart(2, '0'),
-    ].join('-');
+    const membresiaVigente = await em.findOne(Membresia, {
+      cliente,
+      estadoMembresia: EstadoMembresia.ACTIVA,
+      fechaFin: { $gte: hoyISO() },
+    });
+    if (!membresiaVigente) {
+      return res.status(400).json({
+        message:
+          'El cliente necesita una membresía activa y vigente para solicitar una rutina',
+      });
+    }
 
     const solicitud = em.create(Solicitud, {
-      peso: datos.peso as number,
-      masaMuscular: datos.masaMuscular as number,
-      altura: datos.altura as number,
-      objetivo: datos.objetivo as string,
-      lesionesPrevias: datos.lesionesPrevias as string | null | undefined,
-      fechaSolicitud,
+      peso: datos.peso,
+      masaMuscular: datos.masaMuscular,
+      altura: datos.altura,
+      objetivo: datos.objetivo,
+      lesionesPrevias: datos.lesionesPrevias,
+      fechaSolicitud: hoyISO(),
       estado: EstadoSolicitud.PENDIENTE,
       cliente,
     });
@@ -248,49 +291,38 @@ async function update(req: Request, res: Response) {
       });
     }
 
-    const datos = req.body.sanitizedInput as Record<string, unknown>;
+    const datos = req.body.sanitizedInput;
     const clienteId = datos.clienteId;
 
-    if (clienteId !== undefined) {
-      const cliente = await em.findOne(Usuario, {
-        id: clienteId as number,
+    if (clienteId !== undefined && clienteId !== solicitud.cliente.id) {
+      return res.status(409).json({
+        message: 'El cliente de una solicitud no se puede modificar',
       });
-
-      if (!cliente) {
-        return res.status(404).json({
-          message: 'El Usuario asociado no existe',
-        });
-      }
-
-      if (cliente.rol !== RolUsuario.CLIENTE) {
-        return res.status(400).json({
-          message: 'Error de validación',
-          errores: ['Solo los usuarios con rol de cliente pueden tener solicitudes.'],
-        });
-      }
-
-      solicitud.cliente = cliente;
     }
 
     if (datos.peso !== undefined) {
-      solicitud.peso = datos.peso as number;
+      solicitud.peso = datos.peso;
     }
 
     if (datos.masaMuscular !== undefined) {
-      solicitud.masaMuscular = datos.masaMuscular as number;
+      solicitud.masaMuscular = datos.masaMuscular;
     }
 
     if (datos.altura !== undefined) {
-      solicitud.altura = datos.altura as number;
+      solicitud.altura = datos.altura;
     }
 
     if (datos.objetivo !== undefined) {
-      solicitud.objetivo = datos.objetivo as string;
+      solicitud.objetivo = datos.objetivo;
+    }
+
+    if (datos.estado !== undefined) {
+      solicitud.estado = datos.estado;
     }
 
     if (datos.lesionesPrevias !== undefined) {
       solicitud.lesionesPrevias =
-        datos.lesionesPrevias as string | undefined;
+        datos.lesionesPrevias !== null ? datos.lesionesPrevias : null;
     }
 
     await em.flush();
@@ -323,7 +355,8 @@ async function remove(req: Request, res: Response) {
       solicitud.cliente.id !== usuarioAutenticado.id
     ) {
       return res.status(403).json({
-        message: 'No tenés permiso para eliminar una solicitud de otro cliente.',
+        message:
+          'No tenés permiso para eliminar una solicitud de otro cliente.',
       });
     }
 
@@ -341,11 +374,4 @@ async function remove(req: Request, res: Response) {
   }
 }
 
-export {
-  sanitizeSolicitudInput,
-  findAll,
-  findOne,
-  add,
-  update,
-  remove,
-};
+export { sanitizeSolicitudInput, findAll, findOne, add, update, remove };

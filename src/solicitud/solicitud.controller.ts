@@ -122,13 +122,50 @@ function sanitizeSolicitudInput(
   next();
 }
 
+// DTO para el listado y el detalle, sin exponer datos personales del cliente.
+function obtenerDatosSolicitud(solicitud: Solicitud) {
+  return {
+    id: solicitud.id,
+    fechaSolicitud: solicitud.fechaSolicitud,
+    peso: solicitud.peso,
+    masaMuscular: solicitud.masaMuscular,
+    altura: solicitud.altura,
+    objetivo: solicitud.objetivo,
+    lesionesPrevias: solicitud.lesionesPrevias,
+    estado: solicitud.estado,
+    cliente: {
+      id: solicitud.cliente.id,
+      nombre: solicitud.cliente.nombre,
+      apellido: solicitud.cliente.apellido,
+      email: solicitud.cliente.email,
+    },
+  };
+}
+
 async function findAll(req: Request, res: Response) {
   try {
-    const solicitudes = await em.find(Solicitud, {}, { populate: ['cliente'] });
+    let estado: any = req.query.estado;
+
+    if (estado !== undefined) {
+      estado = typeof estado === 'string' ? estado.trim().toLowerCase() : '';
+
+      if (!Object.values(EstadoSolicitud).includes(estado)) {
+        return res.status(400).json({
+          message: 'El estado debe ser pendiente, aprobada o rechazada',
+        });
+      }
+    }
+
+    const filtro = estado ? { estado } : {};
+    const solicitudes = await em.find(Solicitud, filtro, {
+      populate: ['cliente'],
+    });
+
+    const datos = solicitudes.map(obtenerDatosSolicitud);
 
     res.status(200).json({
       message: 'Solicitudes encontradas',
-      data: solicitudes,
+      data: datos,
     });
   } catch (error) {
     manejarError(res, error, { req });
@@ -163,9 +200,11 @@ async function findOne(req: Request, res: Response) {
       });
     }
 
+    const datos = obtenerDatosSolicitud(solicitud);
+
     res.status(200).json({
       message: 'Solicitud encontrada',
-      data: solicitud,
+      data: datos,
     });
   } catch (error) {
     manejarError(res, error, { req });
@@ -212,7 +251,8 @@ async function add(req: Request, res: Response) {
     });
     if (!membresiaVigente) {
       return res.status(400).json({
-        message: 'El cliente necesita una membresía activa y vigente para solicitar una rutina',
+        message:
+          'El cliente necesita una membresía activa y vigente para solicitar una rutina',
       });
     }
 

@@ -4,6 +4,10 @@ import { orm } from '../shared/db/orm.js';
 import { Usuario, RolUsuario } from '../usuario/usuario.entity.js';
 import { Clase, DiaSemana } from './clase.entity.js';
 import { Disciplina } from '../disciplina/disciplina.entity.js';
+import {
+  Inscripcion,
+  EstadoInscripcion,
+} from '../inscripcion/inscripcion.entity.js';
 
 const em = orm.em;
 
@@ -35,10 +39,63 @@ async function validarHorario(
     : null;
 }
 
+// DTO para el listado y el detalle, sin exponer datos personales del entrenador.
+async function obtenerDatosClase(clase: Clase) {
+  const inscripcionesActivas = await em.count(Inscripcion, {
+    clase: clase.id,
+    estadoInscripcion: EstadoInscripcion.ACTIVA,
+  });
+
+  return {
+    id: clase.id,
+    cupos: clase.cupos,
+    cuposDisponibles: Math.max(0, clase.cupos - inscripcionesActivas),
+    diaSemana: clase.diaSemana,
+    horaInicio: clase.horaInicio,
+    horaFin: clase.horaFin,
+    disciplina: {
+      id: clase.disciplina.id,
+      nombre: clase.disciplina.nombre,
+    },
+    entrenador: {
+      id: clase.entrenador.id,
+      nombre: clase.entrenador.nombre,
+      apellido: clase.entrenador.apellido,
+    },
+  };
+}
+
 async function findAll(req: Request, res: Response) {
   try {
-    const clases = await em.find(Clase, {});
-    res.status(200).json({ message: 'Clases encontradas', data: clases });
+    let disciplinaId: number | undefined;
+    const paramDisciplina = req.query.disciplinaId ?? req.query.disciplina;
+
+    if (paramDisciplina !== undefined) {
+      disciplinaId = Number(paramDisciplina);
+      if (
+        typeof paramDisciplina !== 'string' ||
+        !/^\d+$/.test(paramDisciplina) ||
+        !Number.isSafeInteger(disciplinaId) ||
+        disciplinaId <= 0
+      ) {
+        return res.status(400).json({
+          message: 'El id de la disciplina debe ser un número entero positivo',
+        });
+      }
+    }
+
+    const filtro = disciplinaId ? { disciplina: disciplinaId } : {};
+    const clases = await em.find(Clase, filtro, {
+      populate: ['entrenador', 'disciplina'],
+    });
+
+    const datos = [];
+    for (const clase of clases) {
+      const datosClase = await obtenerDatosClase(clase);
+      datos.push(datosClase);
+    }
+
+    res.status(200).json({ message: 'Clases encontradas', data: datos });
   } catch (error) {
     manejarError(res, error, { req });
   }
@@ -49,11 +106,18 @@ async function findOne(req: Request, res: Response) {
     const id = leerId(req, res);
     if (id === null) return;
 
-    const clase = await em.findOne(Clase, { id });
+    const clase = await em.findOne(
+      Clase,
+      { id },
+      {
+        populate: ['entrenador', 'disciplina'],
+      },
+    );
     if (!clase) {
       return res.status(404).json({ message: 'Clase no encontrada' });
     }
-    res.status(200).json({ message: 'Clase encontrada', data: clase });
+    const datos = await obtenerDatosClase(clase);
+    res.status(200).json({ message: 'Clase encontrada', data: datos });
   } catch (error) {
     manejarError(res, error, { req });
   }

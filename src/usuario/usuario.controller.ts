@@ -156,7 +156,9 @@ async function findOne(req: Request, res: Response) {
       });
     }
 
-    const usuario = await em.findOne(Usuario, { id });
+    const usuario = await em.findOne(Usuario, { id }, {
+      populate: ['disciplinas'],
+    });
     if (!usuario) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }

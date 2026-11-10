@@ -4,7 +4,7 @@ import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { RequestContext } from '@mikro-orm/core';
-import { orm, syncSchema } from './shared/db/orm.js';
+import { orm, syncSchema, asegurarAdminInicial } from './shared/db/orm.js';
 import { manejarError } from './shared/utils.js';
 import { disciplinaRouter } from './disciplina/disciplina.routes.js';
 import { usuarioRouter } from './usuario/usuario.routes.js';
@@ -74,6 +74,7 @@ app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
 
 if (process.env.NODE_ENV !== 'production') {
   await syncSchema();
+  await asegurarAdminInicial();
 }
 
 const port = Number(process.env.PORT) || 3000;

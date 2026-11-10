@@ -1,0 +1,518 @@
+
+@baseUrl = http://localhost:3000/api
+
+# FASE 1: AUTOREGISTRO PÚBLICO Y LOGIN DEL ADMIN INICIAL
+
+### 1. Autoregistro de Cliente 1 (Carlos Pérez, rol forzado a "cliente")
+# @name crearCliente1
+POST {{baseUrl}}/registro
+Content-Type: application/json
+
+{
+  "nombre": "Carlos",
+  "apellido": "Perez",
+  "fechaNacimiento": "1995-04-12",
+  "nombreUsuario": "carloscliente",
+  "email": "carlos@mail.com",
+  "contrasenia": "carlos123",
+  "telefono": "3414445566"
+}
+
+
+# FASE 2: LOGIN ADMIN Y ALTA DE USUARIOS (CRUD SIMPLE: USUARIO)
+
+### 2. Login como Administrador
+# @name loginAdmin
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "admin@gmail.com",
+  "contrasenia": "admin1234"
+}
+
+### Guardar Token de Admin
+@tokenAdmin = {{loginAdmin.response.body.data}}
+
+### 4. Admin crea al Cliente 2 (Ana, recibirá ID 3)
+# @name crearCliente2
+POST {{baseUrl}}/usuarios
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "rol": "cliente",
+  "nombre": "Ana",
+  "apellido": "Gomez",
+  "fechaNacimiento": "1998-07-20",
+  "nombreUsuario": "anacliente",
+  "email": "ana@mail.com",
+  "contrasenia": "ana12345",
+  "telefono": "3415551122"
+}
+
+### 5. Admin crea al Cliente 3 (Juan, recibirá ID 4 - para dejar una solicitud pendiente)
+# @name crearCliente3
+POST {{baseUrl}}/usuarios
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "rol": "cliente",
+  "nombre": "Juan",
+  "apellido": "Martinez",
+  "fechaNacimiento": "2000-11-05",
+  "nombreUsuario": "juancliente",
+  "email": "juan@mail.com",
+  "contrasenia": "juan12345"
+}
+
+### 6. Admin crea al Entrenador 1 (Carlos López, recibirá ID 5)
+# @name crearEntrenador1
+POST {{baseUrl}}/usuarios
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "rol": "entrenador",
+  "nombre": "Carlos",
+  "apellido": "Lopez",
+  "fechaNacimiento": "1990-05-15",
+  "nombreUsuario": "carlosentrenador",
+  "email": "carlosentrenador@mail.com",
+  "contrasenia": "carlos12345"
+}
+
+### 7. Admin crea al Entrenador 2 (Luis Fernández, recibirá ID 6 - para pruebas de permisos cruzados)
+# @name crearEntrenador2
+POST {{baseUrl}}/usuarios
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "rol": "entrenador",
+  "nombre": "Luis",
+  "apellido": "Fernandez",
+  "fechaNacimiento": "1988-03-10",
+  "nombreUsuario": "luisentrenador",
+  "email": "luisentrenador@mail.com",
+  "contrasenia": "luis12345"
+}
+
+
+# FASE 3: CARGA DE CATÁLOGOS (CRUDs SIMPLES: PLAN Y DISCIPLINA)
+
+### 8. Admin crea Plan 1 (Activo y con clases grupales)
+# @name crearPlan1
+POST {{baseUrl}}/planes
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "nombre": "Plan Total",
+  "precio": 25000.00,
+  "incluyeClasesGrupales": true,
+  "duracionEnMeses": 6,
+  "descripcion": "Acceso total a sala de musculación y todas las clases grupales.",
+  "activo": true
+}
+
+### 9. Admin crea Plan 2 (Activo, solo musculación)
+# @name crearPlan2
+POST {{baseUrl}}/planes
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "nombre": "Plan Musculación",
+  "precio": 15000.00,
+  "incluyeClasesGrupales": false,
+  "duracionEnMeses": 1,
+  "descripcion": "Acceso libre a sala de musculación.",
+  "activo": true
+}
+
+### 10. Admin crea Plan 3 (Inactivo - para demostrar verificarTokenOpcional en GET /planes)
+# @name crearPlanInactivo
+POST {{baseUrl}}/planes
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "nombre": "Plan Invierno Promo (Dado de baja)",
+  "precio": 10000.00,
+  "incluyeClasesGrupales": false,
+  "duracionEnMeses": 3,
+  "descripcion": "Plan promocional fuera de vigencia (solo visible para Admin).",
+  "activo": false
+}
+
+### 11. Admin crea Disciplina 1 (Functional Training)
+# @name crearDisciplina1
+POST {{baseUrl}}/disciplinas
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "nombre": "Functional Training",
+  "descripcion": "Entrenamiento funcional de alta intensidad enfocado en fuerza y resistencia."
+}
+
+### 12. Admin crea Disciplina 2 (Spinning)
+# @name crearDisciplina2
+POST {{baseUrl}}/disciplinas
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "nombre": "Spinning",
+  "descripcion": "Ciclismo fijo de interior con trabajo cardiovascular intenso."
+}
+
+### 13. Admin crea Disciplina 3 (Yoga - sin clases asociadas, lista para probar baja)
+# @name crearDisciplina3
+POST {{baseUrl}}/disciplinas
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "nombre": "Yoga",
+  "descripcion": "Clases de elongación, postura y respiración."
+}
+
+### 14. Admin asigna disciplinas habilitadas al Entrenador 1 (Functional y Spinning)
+PUT {{baseUrl}}/usuarios/{{crearEntrenador1.response.body.data.id}}/disciplinas
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "disciplinaIds": [
+    {{crearDisciplina1.response.body.data.id}},
+    {{crearDisciplina2.response.body.data.id}}
+  ]
+}
+
+### 15. Admin asigna disciplinas habilitadas al Entrenador 2 (Functional)
+PUT {{baseUrl}}/usuarios/{{crearEntrenador2.response.body.data.id}}/disciplinas
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "disciplinaIds": [
+    {{crearDisciplina1.response.body.data.id}}
+  ]
+}
+
+# FASE 4: CRUD DEPENDIENTE CLASE (Y DATOS PARA LISTADO FILTRADO POR DISCIPLINA)
+
+### 16. Login como Entrenador 1 (Carlos López)
+# @name loginEntrenador1
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "carlosentrenador@mail.com",
+  "contrasenia": "carlos12345"
+}
+
+### Guardar Token de Entrenador 1
+@tokenEntrenador1 = {{loginEntrenador1.response.body.data}}
+
+### 17. Entrenador 1 crea Clase 1 de Functional Training (Lunes 08:00 a 09:00)
+# @name crearClase1
+POST {{baseUrl}}/clases
+Authorization: Bearer {{tokenEntrenador1}}
+Content-Type: application/json
+
+{
+  "cupos": 20,
+  "diaSemana": "lunes",
+  "horaInicio": "08:00",
+  "horaFin": "09:00",
+  "disciplinaId": {{crearDisciplina1.response.body.data.id}},
+  "entrenadorId": {{crearEntrenador1.response.body.data.id}}
+}
+
+### 18. Entrenador 1 crea Clase 2 de Spinning (Miércoles 18:00 a 19:00)
+# @name crearClase2
+POST {{baseUrl}}/clases
+Authorization: Bearer {{tokenEntrenador1}}
+Content-Type: application/json
+
+{
+  "cupos": 15,
+  "diaSemana": "miercoles",
+  "horaInicio": "18:00",
+  "horaFin": "19:00",
+  "disciplinaId": {{crearDisciplina2.response.body.data.id}},
+  "entrenadorId": {{crearEntrenador1.response.body.data.id}}
+}
+
+### 19. Login como Entrenador 2 (Luis Fernández)
+# @name loginEntrenador2
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "luisentrenador@mail.com",
+  "contrasenia": "luis12345"
+}
+
+### Guardar Token de Entrenador 2
+@tokenEntrenador2 = {{loginEntrenador2.response.body.data}}
+
+### 20. Entrenador 2 crea Clase 3 de Functional Training (Martes 10:00 a 11:00)
+# @name crearClase3
+POST {{baseUrl}}/clases
+Authorization: Bearer {{tokenEntrenador2}}
+Content-Type: application/json
+
+{
+  "cupos": 15,
+  "diaSemana": "martes",
+  "horaInicio": "10:00",
+  "horaFin": "11:00",
+  "disciplinaId": {{crearDisciplina1.response.body.data.id}},
+  "entrenadorId": {{crearEntrenador2.response.body.data.id}}
+}
+
+
+# FASE 5: CRUD DEPENDIENTE MEMBRESÍA + ACTIVACIÓN POR PAGO
+
+### 21. Login como Cliente 1 (Carlos Pérez, ID 2)
+# @name loginCliente1
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "carlos@mail.com",
+  "contrasenia": "carlos123"
+}
+
+### Guardar Token de Cliente 1
+@tokenCliente1 = {{loginCliente1.response.body.data}}
+
+### 22. Cliente 1 contrata Membresía con Plan Total (nace en estado "pendiente")
+# @name contratarCliente1
+POST {{baseUrl}}/membresias
+Authorization: Bearer {{tokenCliente1}}
+Content-Type: application/json
+
+{
+  "clienteId": {{crearCliente1.response.body.data.id}},
+  "planId": {{crearPlan1.response.body.data.id}}
+}
+
+### 23. Cliente 1 registra el Pago de su Membresía
+# @name crearPagoCliente1
+POST {{baseUrl}}/pagos
+Authorization: Bearer {{tokenCliente1}}
+Content-Type: application/json
+
+{
+  "membresiaId": {{contratarCliente1.response.body.data.id}},
+  "metodoPago": "transferencia",
+  "fechaLimitePago": "{{contratarCliente1.response.body.data.fechaInicio}}"
+}
+
+### 24. Cliente 1 confirma el Pago -> La Membresía pasa a "activa"
+PATCH {{baseUrl}}/pagos/{{contratarCliente1.response.body.data.id}}/{{crearPagoCliente1.response.body.data.idPago}}/confirmar
+Authorization: Bearer {{tokenCliente1}}
+
+### 25. Cliente 1 se inscribe a la Clase 1 (descuenta 1 cupo disponible en el listado de clases)
+POST {{baseUrl}}/inscripciones
+Authorization: Bearer {{tokenCliente1}}
+Content-Type: application/json
+
+{
+  "clienteId": {{crearCliente1.response.body.data.id}},
+  "claseId": {{crearClase1.response.body.data.id}}
+}
+
+### 26. Login como Cliente 2 (Ana Gómez)
+# @name loginCliente2
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "ana@mail.com",
+  "contrasenia": "ana12345"
+}
+
+### Guardar Token de Cliente 2
+@tokenCliente2 = {{loginCliente2.response.body.data}}
+
+### 27. Cliente 2 contrata Membresía con Plan Total (nace "pendiente")
+# @name contratarCliente2
+POST {{baseUrl}}/membresias
+Authorization: Bearer {{tokenCliente2}}
+Content-Type: application/json
+
+{
+  "clienteId": {{crearCliente2.response.body.data.id}},
+  "planId": {{crearPlan1.response.body.data.id}}
+}
+
+### 28. Cliente 2 registra el Pago de su Membresía
+# @name crearPagoCliente2
+POST {{baseUrl}}/pagos
+Authorization: Bearer {{tokenCliente2}}
+Content-Type: application/json
+
+{
+  "membresiaId": {{contratarCliente2.response.body.data.id}},
+  "metodoPago": "efectivo",
+  "fechaLimitePago": "{{contratarCliente2.response.body.data.fechaInicio}}"
+}
+
+### 29. Cliente 2 confirma el Pago -> La Membresía pasa a "activa"
+PATCH {{baseUrl}}/pagos/{{contratarCliente2.response.body.data.id}}/{{crearPagoCliente2.response.body.data.idPago}}/confirmar
+Authorization: Bearer {{tokenCliente2}}
+
+### 30. Login como Cliente 3 (Juan Martínez)
+# @name loginCliente3
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "juan@mail.com",
+  "contrasenia": "juan12345"
+}
+
+### Guardar Token de Cliente 3
+@tokenCliente3 = {{loginCliente3.response.body.data}}
+
+### 31. Cliente 3 contrata Membresía con Plan Musculación
+# @name contratarCliente3
+POST {{baseUrl}}/membresias
+Authorization: Bearer {{tokenCliente3}}
+Content-Type: application/json
+
+{
+  "clienteId": {{crearCliente3.response.body.data.id}},
+  "planId": {{crearPlan2.response.body.data.id}}
+}
+
+### 32. Cliente 3 registra y confirma su Pago -> Membresía pasa a "activa"
+# @name crearPagoCliente3
+POST {{baseUrl}}/pagos
+Authorization: Bearer {{tokenCliente3}}
+Content-Type: application/json
+
+{
+  "membresiaId": {{contratarCliente3.response.body.data.id}},
+  "metodoPago": "transferencia",
+  "fechaLimitePago": "{{contratarCliente3.response.body.data.fechaInicio}}"
+}
+
+### 33. Confirmar pago de Cliente 3
+PATCH {{baseUrl}}/pagos/{{contratarCliente3.response.body.data.id}}/{{crearPagoCliente3.response.body.data.idPago}}/confirmar
+Authorization: Bearer {{tokenCliente3}}
+
+
+# ==============================================================================
+# FASE 6: CASO DE USO 1 - SOLICITAR RUTINA PERSONALIZADA
+# ==============================================================================
+
+### 34. Cliente 1 solicita rutina personalizada (nace con fecha de hoy y estado "pendiente")
+# @name crearSolicitud1
+POST {{baseUrl}}/solicitudes
+Authorization: Bearer {{tokenCliente1}}
+Content-Type: application/json
+
+{
+  "clienteId": {{crearCliente1.response.body.data.id}},
+  "peso": 75,
+  "masaMuscular": 32,
+  "altura": 1.80,
+  "objetivo": "Aumentar masa muscular en tren superior",
+  "lesionesPrevias": "Ninguna"
+}
+
+### 35. Cliente 2 solicita rutina personalizada (nace en estado "pendiente")
+# @name crearSolicitud2
+POST {{baseUrl}}/solicitudes
+Authorization: Bearer {{tokenCliente2}}
+Content-Type: application/json
+
+{
+  "clienteId": {{crearCliente2.response.body.data.id}},
+  "peso": 60,
+  "masaMuscular": 25,
+  "altura": 1.65,
+  "objetivo": "Tonificación general y resistencia",
+  "lesionesPrevias": "Esguince de tobillo derecho hace 1 año"
+}
+
+### 36. Cliente 3 solicita rutina personalizada (quedará "pendiente" para mostrar en la defensa)
+# @name crearSolicitud3
+POST {{baseUrl}}/solicitudes
+Authorization: Bearer {{tokenCliente3}}
+Content-Type: application/json
+
+{
+  "clienteId": {{crearCliente3.response.body.data.id}},
+  "peso": 82,
+  "masaMuscular": 35,
+  "altura": 1.78,
+  "objetivo": "Recomposición corporal y fuerza base",
+  "lesionesPrevias": "Molestia lumbar leve"
+}
+
+
+# ==============================================================================
+# FASE 7: CASO DE USO 2 - CREAR Y ASIGNAR RUTINA
+# ==============================================================================
+
+### 37. Entrenador 1 crea y asigna Rutina a la Solicitud 1 (la Solicitud 1 pasa a "aprobada")
+# @name crearRutina1
+POST {{baseUrl}}/rutinas
+Authorization: Bearer {{tokenEntrenador1}}
+Content-Type: application/json
+
+{
+  "nombre": "Rutina Hipertrofia Tren Superior",
+  "descripcion": "Día 1: Pecho y Tríceps. Día 2: Espalda y Bíceps. Día 3: Hombros y Core. 4 series de 10-12 repeticiones.",
+  "solicitudId": {{crearSolicitud1.response.body.data.id}},
+  "entrenadorId": {{crearEntrenador1.response.body.data.id}}
+}
+
+### 38. Entrenador 2 crea y asigna Rutina a la Solicitud 2 (la Solicitud 2 pasa a "aprobada")
+# @name crearRutina2
+POST {{baseUrl}}/rutinas
+Authorization: Bearer {{tokenEntrenador2}}
+Content-Type: application/json
+
+{
+  "nombre": "Rutina Full Body y Tonificación",
+  "descripcion": "Circuito de cuerpo completo 3 veces por semana con bajo impacto articular en tobillo.",
+  "solicitudId": {{crearSolicitud2.response.body.data.id}},
+  "entrenadorId": {{crearEntrenador2.response.body.data.id}}
+}
+
+
+# ==============================================================================
+# FASE 8: CONSULTAS RÁPIDAS DE VERIFICACIÓN PARA DEMOSTRAR EN LA DEFENSA
+# ==============================================================================
+
+### 39. [Público vs Admin] Consultar planes sin token (solo devuelve planes activos)
+GET {{baseUrl}}/planes
+
+### 40. [Público vs Admin] Consultar planes con token Admin (devuelve activos e inactivos)
+GET {{baseUrl}}/planes
+Authorization: Bearer {{tokenAdmin}}
+
+### 41. [Listado 1] Clases filtradas por Disciplina 1 (muestra cuposDisponibles descontando la inscripción)
+GET {{baseUrl}}/clases?disciplinaId={{crearDisciplina1.response.body.data.id}}
+
+### 42. [Listado 2] Solicitudes filtradas por estado "pendiente" (muestra la Solicitud 3 lista para atender)
+GET {{baseUrl}}/solicitudes?estado=pendiente
+Authorization: Bearer {{tokenEntrenador1}}
+
+### 43. [Listado 2] Solicitudes filtradas por estado "aprobada" (muestra Solicitudes 1 y 2 ya con rutina)
+GET {{baseUrl}}/solicitudes?estado=aprobada
+Authorization: Bearer {{tokenEntrenador1}}
+
+### 44. [CU Rutina] Cliente 1 consulta sus rutinas (solo ve la propia)
+GET {{baseUrl}}/rutinas
+Authorization: Bearer {{tokenCliente1}}

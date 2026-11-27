@@ -211,6 +211,63 @@ async function findOne(req: Request, res: Response) {
   }
 }
 
+async function findByCliente(req: Request, res: Response) {
+  try {
+    const valorClienteId = req.params.clienteId;
+    const clienteId = Number(valorClienteId);
+
+    if (
+      !/^\d+$/.test(valorClienteId) ||
+      !Number.isSafeInteger(clienteId) ||
+      clienteId <= 0
+    ) {
+      return res.status(400).json({
+        message: 'El id de cliente debe ser un número entero positivo',
+      });
+    }
+
+    const usuarioAutenticado = (req as any).usuario;
+    if (
+      usuarioAutenticado.rol === RolUsuario.CLIENTE &&
+      clienteId !== usuarioAutenticado.id
+    ) {
+      return res.status(403).json({
+        message:
+          'No tenés permiso para consultar las solicitudes de otro cliente.',
+      });
+    }
+
+    let estado: any = req.query.estado;
+    if (estado !== undefined) {
+      estado = typeof estado === 'string' ? estado.trim().toLowerCase() : '';
+
+      if (!Object.values(EstadoSolicitud).includes(estado)) {
+        return res.status(400).json({
+          message: 'El estado debe ser pendiente, aprobada o rechazada',
+        });
+      }
+    }
+
+    const filtro: Record<string, unknown> = { cliente: clienteId };
+    if (estado) {
+      filtro.estado = estado;
+    }
+
+    const solicitudes = await em.find(Solicitud, filtro, {
+      populate: ['cliente'],
+    });
+
+    const datos = solicitudes.map(obtenerDatosSolicitud);
+
+    res.status(200).json({
+      message: 'Solicitudes del cliente encontradas',
+      data: datos,
+    });
+  } catch (error) {
+    manejarError(res, error, { req });
+  }
+}
+
 async function add(req: Request, res: Response) {
   try {
     const datos = req.body.sanitizedInput;
@@ -374,4 +431,4 @@ async function remove(req: Request, res: Response) {
   }
 }
 
-export { sanitizeSolicitudInput, findAll, findOne, add, update, remove };
+export { sanitizeSolicitudInput, findAll, findOne, findByCliente, add, update, remove };

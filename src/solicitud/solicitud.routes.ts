@@ -15,7 +15,7 @@ import {
 
 export const solicitudRouter = Router();
 
-solicitudRouter.get('/', verificarToken, isAdminEntrenador, findAll);
+solicitudRouter.get('/', verificarToken, findAll);
 solicitudRouter.get('/:id', verificarToken, findOne);
 solicitudRouter.post('/', verificarToken, isAdminCliente, sanitizeSolicitudInput, add);
 solicitudRouter.put('/:id', verificarToken, isAdminEntrenador, sanitizeSolicitudInput, update);

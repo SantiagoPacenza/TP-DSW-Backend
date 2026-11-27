@@ -3,6 +3,7 @@ import {
   sanitizeSolicitudInput,
   findAll,
   findOne,
+  findByCliente,
   add,
   update,
   remove,
@@ -15,7 +16,8 @@ import {
 
 export const solicitudRouter = Router();
 
-solicitudRouter.get('/', verificarToken, findAll);
+solicitudRouter.get('/', verificarToken, isAdminEntrenador, findAll);
+solicitudRouter.get('/cliente/:clienteId', verificarToken, findByCliente);
 solicitudRouter.get('/:id', verificarToken, findOne);
 solicitudRouter.post('/', verificarToken, isAdminCliente, sanitizeSolicitudInput, add);
 solicitudRouter.put('/:id', verificarToken, isAdminEntrenador, sanitizeSolicitudInput, update);

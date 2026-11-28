@@ -72,13 +72,17 @@ app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   return manejarError(res, err, { req });
 });
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
   await syncSchema();
   await asegurarAdminInicial();
 }
 
 const port = Number(process.env.PORT) || 3000;
 
-app.listen(port, () => {
-  console.log(`Servidor escuchando en http://localhost:${port}`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(port, () => {
+    console.log(`Servidor escuchando en http://localhost:${port}`);
+  });
+}
+
+export { app };
